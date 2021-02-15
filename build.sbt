@@ -1,10 +1,11 @@
-name := "lakefs-client"
+name := "lakefs-spark-client"
 scalaVersion := "2.12.10"
 
 organization := "io.treeverse"
 version := "1.0"
+Compile / PB.includePaths ++= Seq((Compile / resourceDirectory).value)
+Compile / PB.protoSources ++= Seq((Compile / resourceDirectory).value)
 
-Compile / PB.protoSources := Seq(file("../catalog/"), file("../graveler/committed"))
 Compile / PB.targets := Seq(
   PB.gens.java -> (Compile / sourceManaged).value
 )
