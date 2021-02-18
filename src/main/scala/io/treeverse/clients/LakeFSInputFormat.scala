@@ -1,9 +1,9 @@
-package io.treeverse.clients
+  package io.treeverse.clients
 
 import io.treeverse.committed.Committed.RangeData
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.Text
-import org.apache.hadoop.mapred._
+import org.apache.hadoop.mapred._ // TODO (johnnyaug)  use only "madereduce", not mapred
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 
 import java.io.File
@@ -51,6 +51,7 @@ class LakeFSInputFormat extends InputFormat[Text, Text] {
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
     val ranges = new SSTableReader().get(localFile.getAbsolutePath, RangeData.newBuilder().build())
     localFile.delete()
+    // TODO(johnnyaug) ask lakeFS metadata server for the sstable url
     ranges.map(r => new FileSplit(new Path(p.getParent + "/" + new String(r.identity)), 0, 0, null.asInstanceOf[Array[String]])).toArray
   }
 
@@ -60,6 +61,7 @@ class LakeFSInputFormat extends InputFormat[Text, Text] {
     val fileSplit = split.asInstanceOf[FileSplit]
     val fs = fileSplit.getPath.getFileSystem(job)
     fs.copyToLocalFile(fileSplit.getPath, new Path(localFile.getAbsolutePath))
+    // TODO(johnnyaug) should we cache this?
     new EntryRecordReader(new SSTableReader(), localFile.getAbsolutePath)
   }
 
