@@ -12,9 +12,9 @@ Compile / PB.targets := Seq(
 
 libraryDependencies += "org.rocksdb" % "rocksdbjni" % "6.6.4"
 libraryDependencies += "commons-codec" % "commons-codec" % "1.15"
-libraryDependencies += "com.amazonaws" % "aws-java-sdk-s3" % "1.11.946"
 libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.0.1"
 libraryDependencies +=  "com.google.protobuf" % "protobuf-java" % "3.14.0" % "protobuf"
+libraryDependencies += "org.apache.hadoop" % "hadoop-aws" % "2.7.3"
 
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll
