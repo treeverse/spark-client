@@ -8,7 +8,7 @@ class ApiClient(apiUrl : String, accessKey : String, secretKey : String) {
   def getRepositoryStorageNamespace(repoName: String): String = {
     val resp = Http("%s/repositories/%s".format(apiUrl, repoName)).header("Accept", "application/json").auth(accessKey, secretKey).asString
     val JString(storageNamespace) = parse(resp.body) \ "storage_namespace"
-    storageNamespace.replace("s3://", "s3a://")
+    storageNamespace.replace("s3://", "s3a://") // TODO(johnnyaug) solve this without replace
   }
 
   def getMetaRangeURL(repoName: String, storageNamespace: String, commitID: String): String = {
