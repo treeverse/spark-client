@@ -3,16 +3,21 @@ package io.treeverse.clients
 import com.google.protobuf.{CodedInputStream, Message}
 import org.rocksdb.{SstFileReader, _}
 
+import scala.collection.JavaConverters._
+
 import java.io.{ByteArrayInputStream, DataInputStream}
+import java.io.Closeable
 
-class SSTableItem(val key: Array[Byte], val id: Array[Byte], val data: Array[Byte])
+class Item[Proto <: Message](val key: Array[Byte], val id: Array[Byte], val message: Proto)
 
-class SSTableIterator(val it: SstFileReaderIterator) extends Iterator[SSTableItem] {
-  it.seekToFirst()
-
+class SSTableIterator[Proto <: Message](val it: SstFileReaderIterator, val messagePrototype: Proto) extends Iterator[Item[Proto]] with Closeable {
+  // TODO(ariels): explicitly make it closeable, and figure out how to close it when used by
+  //     Spark.
   override def hasNext: Boolean = it.isValid
 
-  override def next(): SSTableItem = {
+  override def close = it.close
+
+  override def next(): Item[Proto] = {
     val bais = new ByteArrayInputStream(it.value)
     val key = it.key()
     val dis = new DataInputStream(bais)
@@ -20,8 +25,17 @@ class SSTableIterator(val it: SstFileReaderIterator) extends Iterator[SSTableIte
     val id = dis.readNBytes(identityLength.toInt)
     val dataLength = VarInt.readSignedVarLong(dis)
     val data = dis.readNBytes(dataLength.toInt)
+    // TODO(ariels): Error if dis is not exactly at end?  (But then cannot add more fields in
+    //     future, sigh...)
+
+    val dataStream = CodedInputStream.newInstance(data)
+    val message = messagePrototype.getParserForType.parseFrom(data).asInstanceOf[Proto]
+
+    // TODO (johnnyaug) validate item is of the expected type - metarange/range
+    dataStream.checkLastTagWas(0)
     it.next()
-    new SSTableItem(key, id, data)
+
+    new Item(key, id, message)
   }
 }
 
@@ -29,28 +43,23 @@ object SSTableReader {
   RocksDB.loadLibrary()
 }
 
-class SSTableReader() {
-  private val reader = new SstFileReader(new Options)
+class SSTableReader[Proto <: Message](sstableFile: String, messagePrototype: Proto) extends Closeable {
+  private val options = new Options
+  private val reader = new SstFileReader(options)
+  private val readOptions = new ReadOptions
+  reader.open(sstableFile)
 
-  def getData(sstableFile: String): SSTableIterator = {
-    reader.open(sstableFile)
-    new SSTableIterator(reader.newIterator(new ReadOptions))
+  def close() = {
+    reader.close
+    options.close
+    readOptions.close
   }
 
-  def make[Proto <: Message](item: SSTableItem, messagePrototype: Proto): EntryRecord[Proto] = {
-    val data = CodedInputStream.newInstance(item.data)
-    val entry = new EntryRecord[Proto](
-      item.key,
-      item.id,
-      messagePrototype.getParserForType.parseFrom(data).asInstanceOf[Proto],
-    )
-    // TODO (johnnyaug) validate item is of the expected type - metarange/range
-    data.checkLastTagWas(0)
-    entry
+  def getMetadata(): Map[String, String] = reader.getTableProperties.getUserCollectedProperties.asScala.toMap
+
+  def newIterator(): SSTableIterator[Proto] = {
+    val it = reader.newIterator(readOptions)
+    it.seekToFirst()
+    new SSTableIterator(it, messagePrototype)
   }
-
-  def get[Proto <: Message](sstableFile: String, messagePrototype: Proto): Seq[EntryRecord[Proto]] = getData(sstableFile)
-    .map(make(_, messagePrototype))
-    .toSeq
-
 }
