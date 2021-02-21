@@ -10,30 +10,63 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
 import org.apache.hadoop.mapreduce.InputFormat
 import org.apache.hadoop.mapred.SplitLocationInfo
 import org.apache.hadoop.mapreduce.JobContext
-import org.apache.hadoop.mapreduce.lib.input.FileSplit
 
 import java.io.File
 
 import scala.collection.JavaConverters._
 import com.google.protobuf.Message
+import org.apache.hadoop.io.Writable
+import java.io.DataOutput
+import java.io.DataInput
 
-class GravelerSplit(val range: RangeData) extends InputSplit {
+class GravelerSplit(var range: RangeData, var path: Path) extends InputSplit with Writable {
+  def this() = this(null, null)
+
+  override def write(out: DataOutput) = {
+    val encodedRange = range.toByteArray()
+    out.writeInt(encodedRange.length)
+    out.write(encodedRange)
+    val p = path.toString
+    out.writeInt(p.length)
+    out.writeChars(p)
+  }
+
+  override def readFields(in: DataInput) = {
+    val encodedRangeLength = in.readInt()
+    val encodedRange = new Array[Byte](encodedRangeLength)
+    in.readFully(encodedRange)
+    range = RangeData.parseFrom(encodedRange)
+    val pathLength = in.readInt()
+    val p = new StringBuilder
+    for (_ <- 1 to pathLength) {
+      p += in.readChar()
+    }
+    path = new Path(p.result)
+  }
+
   override def getLength: Long = range.getEstimatedSize
 
-  override def getLocations: Array[String] = null
+  override def getLocations: Array[String] = Array.empty[String]
 
-  override def getLocationInfo(): Array[SplitLocationInfo] = null
+  override def getLocationInfo(): Array[SplitLocationInfo] = Array.empty[SplitLocationInfo]
 }
 
 class WithIdentifier[Proto <: Message](val id: Array[Byte], val message: Proto) {}
 
-class EntryRecordReader[Proto <: Message](ssTableReader: SSTableReader[Proto]) extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
+class EntryRecordReader[Proto <: Message](prefix: String, messagePrototype: Proto) extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
   var it: SSTableIterator[Proto] = null
   var item: Item[Proto] = null
 
   override def initialize(split: InputSplit, context: TaskAttemptContext) = {
-    val range = split.asInstanceOf[GravelerSplit]
-    it = ssTableReader.newIterator()
+    val localFile = File.createTempFile("lakefs", "range")
+    localFile.deleteOnExit()
+    val gravelerSplit = split.asInstanceOf[GravelerSplit]
+    val fs = gravelerSplit.path.getFileSystem(context.getConfiguration())
+    fs.copyToLocalFile(gravelerSplit.path, new Path(localFile.getAbsolutePath))
+    // TODO(johnnyaug) should we cache this?
+
+    val sstableReader = new SSTableReader(localFile.getAbsolutePath(), messagePrototype)
+    it = sstableReader.newIterator()
   }
 
   override def nextKeyValue: Boolean = {
@@ -64,8 +97,8 @@ class LakeFSInputFormat extends InputFormat[Array[Byte], WithIdentifier[Catalog.
   import LakeFSInputFormat._
 
   override def getSplits(job: JobContext): java.util.List[InputSplit] = {
-    val metaRangePath = job.getConfiguration.get(FileInputFormat.INPUT_DIR)
-    val p = new Path(metaRangePath)
+    val pathPrefix = job.getConfiguration.get(FileInputFormat.INPUT_DIR)
+    val p = new Path(pathPrefix)
     val fs = p.getFileSystem(job.getConfiguration)
     val localFile = File.createTempFile("lakefs", "metarange")
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
@@ -76,7 +109,7 @@ class LakeFSInputFormat extends InputFormat[Array[Byte], WithIdentifier[Catalog.
     val ranges = read(rangesReader)
 
     ranges.map(
-      r => new GravelerSplit(r.message)
+      r => new GravelerSplit(r.message, new Path(p.getParent(), new String(r.id)))
         // Scala / JRE not strong enough to handle List<FileSplit> as List<InputSplit>;
         // explicitly upcast to generate Seq[InputSplit].
         .asInstanceOf[InputSplit]
@@ -84,12 +117,6 @@ class LakeFSInputFormat extends InputFormat[Array[Byte], WithIdentifier[Catalog.
   }
 
   override def createRecordReader(split: InputSplit, context: TaskAttemptContext): RecordReader[Array[Byte], WithIdentifier[Catalog.Entry]] = {
-    val localFile = File.createTempFile("lakefs", "range")
-    localFile.deleteOnExit()
-    val fileSplit = split.asInstanceOf[FileSplit]
-    val fs = fileSplit.getPath.getFileSystem(context.getConfiguration)
-    fs.copyToLocalFile(fileSplit.getPath, new Path(localFile.getAbsolutePath))
-    // TODO(johnnyaug) should we cache this?
-    new EntryRecordReader(new SSTableReader(localFile.getAbsolutePath, Catalog.Entry.getDefaultInstance))
+    new EntryRecordReader(context.getConfiguration.get("lakefs.range.prefix"), Catalog.Entry.getDefaultInstance)
   }
 }
