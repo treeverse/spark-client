@@ -76,7 +76,7 @@ class LakeFSInputFormat extends InputFormat[Array[Byte], WithIdentifier[Catalog.
     val ranges = read(rangesReader)
 
     ranges.map(
-      r => new FileSplit(new Path(p.getParent + "/" + new String(r.id)), 0, 0, null.asInstanceOf[Array[String]])
+      r => new GravelerSplit(r.message)
         // Scala / JRE not strong enough to handle List<FileSplit> as List<InputSplit>;
         // explicitly upcast to generate Seq[InputSplit].
         .asInstanceOf[InputSplit]
