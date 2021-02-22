@@ -1,8 +1,6 @@
 name := "lakefs-spark-client"
 scalaVersion := "2.12.10"
 
-organization := "io.treeverse"
-version := "1.0"
 Compile / PB.includePaths += (Compile / resourceDirectory).value
 Compile / PB.protoSources += (Compile / resourceDirectory).value
 
@@ -19,3 +17,19 @@ libraryDependencies += "org.apache.hadoop" % "hadoop-aws" % "2.7.3"
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll
 )
+
+// Set credentials in this file to be able to publish from your machine.
+//
+// It should contain these lines (unindented):
+//    realm=GitHub Package Registry
+//    host=maven.pkg.github.com
+//    user=YOUR-GITHUB-USERNAME
+//    password=Token from https://github.com/settings/tokens (NOT your password)
+
+credentials += Credentials(Path.userHome / ".sbt" / "credentials")
+
+ThisBuild / versionScheme := Some("early-semver")
+ThisBuild / organization := "io.treeverse"
+ThisBuild / version := "0.1.0-SNAPSHOT"
+
+publishTo := Some("Metadata Client repository" at "https://maven.pkg.github.com/treeverse/spark-client/metadata-client")
