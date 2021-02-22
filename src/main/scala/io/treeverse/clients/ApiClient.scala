@@ -17,7 +17,7 @@ class ApiClient(apiUrl: String, accessKey: String, secretKey: String) {
       val resp = Http(getRepositoryURI.toString).header("Accept", "application/json").auth(accessKey, secretKey).asString
       val JString(storageNamespace) = parse(resp.body) \ "storage_namespace"
       var snUri = URI.create(storageNamespace)
-      snUri = new URI(if (snUri.getScheme == "s3") "s3a" else snUri.getScheme, snUri.getHost, snUri.getPath, snUri.getFragment) // TODO(johnnyaug) solve this without replace
+      snUri = new URI(if (snUri.getScheme == "s3") "s3a" else snUri.getScheme, snUri.getHost, snUri.getPath, snUri.getFragment)
       snUri.normalize().toString
     })
   }
