@@ -95,8 +95,7 @@ class LakeFSInputFormat extends InputFormat[Array[Byte], WithIdentifier[Catalog.
     val apiClient = new ApiClient(conf.get(LAKEFS_CONF_API_URL_KEY),
       conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY),
       conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY))
-    val storageNamespace = apiClient.getRepositoryStorageNamespace(repoName)
-    val metaRangeURL = apiClient.getMetaRangeURL(repoName, storageNamespace, commitID)
+    val metaRangeURL = apiClient.getMetaRangeURL(repoName, commitID)
     val p = new Path(metaRangeURL)
     val fs = p.getFileSystem(job.getConfiguration)
     val localFile = File.createTempFile("lakefs", "metarange")
@@ -105,7 +104,7 @@ class LakeFSInputFormat extends InputFormat[Array[Byte], WithIdentifier[Catalog.
     localFile.delete()
     val ranges = read(rangesReader)
     ranges.map(
-      r => new GravelerSplit(r.message, new Path(storageNamespace + "/" + apiClient.getRangeURL(repoName, new String(r.id))))
+      r => new GravelerSplit(r.message, new Path(apiClient.getRangeURL(repoName, new String(r.id))))
         // Scala / JRE not strong enough to handle List<FileSplit> as List<InputSplit>;
         // explicitly upcast to generate Seq[InputSplit].
         .asInstanceOf[InputSplit]

@@ -17,6 +17,7 @@ libraryDependencies +=  "com.google.protobuf" % "protobuf-java" % "3.14.0" % "pr
 libraryDependencies += "org.apache.hadoop" % "hadoop-aws" % "2.7.3"
 libraryDependencies += "org.scalaj" %% "scalaj-http" % "2.4.2"
 libraryDependencies += "org.json4s" %% "json4s-native" % "3.7.0-M8"
+libraryDependencies += "com.google.guava" % "guava" % "30.1-jre"
 
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll
