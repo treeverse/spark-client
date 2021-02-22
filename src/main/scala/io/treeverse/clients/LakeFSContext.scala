@@ -30,6 +30,4 @@ object LakeFSContext {
     }
     sc.newAPIHadoopRDD(conf, classOf[LakeFSInputFormat], classOf[Array[Byte]], classOf[WithIdentifier[Catalog.Entry]])
   }
-
-  def newRDD(spark: SparkSession, repoName: String, commitID: String): RDD[(Array[Byte], WithIdentifier[Catalog.Entry])] = newRDD(spark.sparkContext, repoName, commitID)
 }

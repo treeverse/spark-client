@@ -1,9 +1,8 @@
 package io.treeverse.clients.example
 
 import org.apache.spark.sql.SparkSession
-import io.treeverse.clients.WithIdentifier
+import io.treeverse.clients.{LakeFSContext, LakeFSInputFormat, WithIdentifier}
 import io.treeverse.catalog.Catalog
-import io.treeverse.clients.LakeFSInputFormat
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkConf
 
@@ -14,17 +13,13 @@ object List extends App {
       .scanLeft("")((a, b: String) => a + "/" + b)
 
   override def main(args: Array[String]) {
-    if (args.length != 1) {
-      Console.err.println("Usage: ... s3://path/to/metarange")
-      System.exit(1)
-    }
-
-    val path = args(0)
-
-    val sc = new SparkContext(new SparkConf().setMaster("local").setAppName("I can list"))
-
-    val files = sc.newAPIHadoopFile[Array[Byte], WithIdentifier[Catalog.Entry], LakeFSInputFormat](path)
-
+    val spark = SparkSession.builder().master("local").appName("I can list")
+      .config("spark.hadoop.lakefs.api.url", "http://localhost:8000/api/v1/")
+      .config("spark.hadoop.lakefs.api.access_key", "AKIAIOSFODNN7EXAMPLE")
+      .config("spark.hadoop.lakefs.api.secret_key", "walrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+      .getOrCreate()
+    val sc = spark.sparkContext
+    val files = LakeFSContext.newRDD(sc, "example-repo", "c7be1745d24c72020001b4954fc33661652698b07a357832ff56137f68f63b0f")
     val count = files.flatMapValues(entry => dirs(entry.message.getAddress))
       .map({ case (_, s) => s })
       .countByValue
