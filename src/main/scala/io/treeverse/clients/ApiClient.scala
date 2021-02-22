@@ -9,10 +9,10 @@ import java.net.URI
 import java.time.Duration
 
 class ApiClient(apiUrl: String, accessKey: String, secretKey: String) {
-  private val cache = CacheBuilder.newBuilder().expireAfterWrite(Duration.ofMinutes(2)).build[String, String]()
+  private val storageNamespaceCache = CacheBuilder.newBuilder().expireAfterWrite(Duration.ofMinutes(2)).build[String, String]()
 
   private def getStorageNamespace(repoName: String): String = {
-    cache.get(repoName, () => {
+    storageNamespaceCache.get(repoName, () => {
       val getRepositoryURI = URI.create("%s/repositories/%s".format(apiUrl, repoName)).normalize()
       val resp = Http(getRepositoryURI.toString).header("Accept", "application/json").auth(accessKey, secretKey).asString
       val JString(storageNamespace) = parse(resp.body) \ "storage_namespace"
