@@ -3,8 +3,8 @@ scalaVersion := "2.12.10"
 
 organization := "io.treeverse"
 version := "1.0"
-Compile / PB.includePaths ++= Seq((Compile / resourceDirectory).value)
-Compile / PB.protoSources ++= Seq((Compile / resourceDirectory).value)
+Compile / PB.includePaths += (Compile / resourceDirectory).value
+Compile / PB.protoSources += (Compile / resourceDirectory).value
 
 Compile / PB.targets := Seq(
   PB.gens.java -> (Compile / sourceManaged).value
