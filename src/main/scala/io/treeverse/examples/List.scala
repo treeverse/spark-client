@@ -16,8 +16,8 @@ object List extends App {
     }
     val spark = SparkSession.builder().master("local").appName("I can list")
       .config("spark.hadoop.lakefs.api.url", "http://localhost:8000/api/v1/")
-      .config("spark.hadoop.lakefs.api.access_key", "AKIAIOSFODNN7EXAMPLE")
-      .config("spark.hadoop.lakefs.api.secret_key", "walrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+      .config("spark.hadoop.lakefs.api.access_key", "...")
+      .config("spark.hadoop.lakefs.api.secret_key", "...")
       .getOrCreate()
     val sc = spark.sparkContext
     val files = LakeFSContext.newRDD(sc, args(0), args(1))
