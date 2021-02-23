@@ -22,35 +22,31 @@ object LakeFSContext {
       sc: SparkContext,
       repoName: String,
       commitID: String
+  ,
   ): RDD[(Array[Byte], WithIdentifier[Catalog.Entry])] = {
     val conf = new Configuration(sc.hadoopConfiguration)
     conf.set(LAKEFS_CONF_JOB_REPO_NAME_KEY, repoName)
     conf.set(LAKEFS_CONF_JOB_COMMIT_ID_KEY, commitID)
-    if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_URL_KEY)))
+    if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_URL_KEY))) {
       throw new InvalidJobConfException(
-        "%s must not be empty".format(LAKEFS_CONF_API_URL_KEY)
+        s"${LAKEFS_CONF_API_URL_KEY} must not be empty",
       )
-    if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY)))
+    }
+    if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY))) {
       throw new InvalidJobConfException(
-        "%s must not be empty".format(LAKEFS_CONF_API_ACCESS_KEY_KEY)
+        s"${LAKEFS_CONF_API_ACCESS_KEY_KEY} must not be empty",
       )
-    if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY)))
-      throw new InvalidJobConfException(
-        "%s must not be empty".format(LAKEFS_CONF_API_SECRET_KEY_KEY)
-      )
-    sc.newAPIHadoopRDD(
-      conf,
-      classOf[LakeFSInputFormat],
-      classOf[Array[Byte]],
-      classOf[WithIdentifier[Catalog.Entry]]
-    )
+    }
+    if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY))) {
+      throw new InvalidJobConfException("%s must not be empty".format(LAKEFS_CONF_API_SECRET_KEY_KEY))
+    }
+    sc.newAPIHadoopRDD(conf, classOf[LakeFSInputFormat], classOf[Array[Byte]], classOf[WithIdentifier[Catalog.Entry]])
   }
-
   def newDF(
-      spark: SparkSession,
-      repoName: String,
-      commitID: String
-  ): DataFrame = {
+             spark: SparkSession,
+             repoName: String,
+             commitID: String
+           ): DataFrame = {
     val rdd = newRDD(spark.sparkContext, repoName, commitID).map { pair =>
       val key = pair._1
       val entry = pair._2.message
@@ -73,3 +69,4 @@ object LakeFSContext {
     spark.createDataFrame(rdd, schema)
   }
 }
+
