@@ -38,7 +38,7 @@ object LakeFSContext {
     }
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY))) {
       throw new InvalidJobConfException(
-        "%s must not be empty".format(LAKEFS_CONF_API_SECRET_KEY_KEY),
+        s"${LAKEFS_CONF_API_SECRET_KEY_KEY} must not be empty",
       )
     }
     sc.newAPIHadoopRDD(
