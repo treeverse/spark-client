@@ -20,7 +20,9 @@ object List extends App {
       .config("spark.hadoop.lakefs.api.secret_key", "walrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
       .getOrCreate()
     val sc = spark.sparkContext
-    val files = LakeFSContext.newRDD(sc, args(0), args(1))
+     val repo = args(0)
+     val ref = args(1)
+     val files = LakeFSContext.newRDD(sc, repo, refs)
     val count = files.flatMapValues(entry => dirs(entry.message.getAddress))
       .map({ case (_, s) => s })
       .countByValue
