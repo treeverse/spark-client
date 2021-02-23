@@ -24,12 +24,13 @@ object List extends App {
     val ref = args(1)
     val files = LakeFSContext.newRDD(sc, repo, ref)
 
-    val count = files.flatMapValues(entry => dirs(entry.message.getAddress))
-      .map({ case (_, s) => (s, 1L) })
+    val size = files.flatMapValues(entry => dirs(entry.message.getAddress).map(d => (d, entry.message.getSize())))
+      .map({ case (_, ds) => ds })
       .reduceByKey(_ + _)
 
 
-    count.collect({ case (path, count) => Console.printf("%s\t%d\n", path, count) })
+    size.top(100000)
+      .collect({ case (path, size) => Console.printf("%s\t%d\n", path, size) })
 
     sc.stop()
   }
