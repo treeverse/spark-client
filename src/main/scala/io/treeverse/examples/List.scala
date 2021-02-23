@@ -22,7 +22,7 @@ object List extends App {
     val sc = spark.sparkContext
      val repo = args(0)
      val ref = args(1)
-     val files = LakeFSContext.newRDD(sc, repo, refs)
+     val files = LakeFSContext.newRDD(sc, repo, ref)
     val count = files.flatMapValues(entry => dirs(entry.message.getAddress))
       .map({ case (_, s) => s })
       .countByValue
