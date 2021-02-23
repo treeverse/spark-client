@@ -17,6 +17,10 @@ libraryDependencies += "org.scalaj" %% "scalaj-http" % "2.4.2"
 libraryDependencies += "org.json4s" %% "json4s-native" % "3.7.0-M8"
 libraryDependencies += "com.google.guava" % "guava" % "30.1-jre"
 
+// Use an older JDK to be Spark compatible
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
+
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll
 )
