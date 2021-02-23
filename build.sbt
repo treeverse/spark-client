@@ -1,5 +1,6 @@
 name := "lakefs-spark-client"
 scalaVersion := "2.12.10"
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 
 Compile / PB.includePaths += (Compile / resourceDirectory).value
 Compile / PB.protoSources += (Compile / resourceDirectory).value
