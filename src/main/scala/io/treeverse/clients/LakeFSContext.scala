@@ -21,8 +21,7 @@ object LakeFSContext {
   def newRDD(
       sc: SparkContext,
       repoName: String,
-      commitID: String
-  ,
+      commitID: String,
   ): RDD[(Array[Byte], WithIdentifier[Catalog.Entry])] = {
     val conf = new Configuration(sc.hadoopConfiguration)
     conf.set(LAKEFS_CONF_JOB_REPO_NAME_KEY, repoName)
@@ -38,15 +37,23 @@ object LakeFSContext {
       )
     }
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY))) {
-      throw new InvalidJobConfException("%s must not be empty".format(LAKEFS_CONF_API_SECRET_KEY_KEY))
+      throw new InvalidJobConfException(
+        "%s must not be empty".format(LAKEFS_CONF_API_SECRET_KEY_KEY),
+      )
     }
-    sc.newAPIHadoopRDD(conf, classOf[LakeFSInputFormat], classOf[Array[Byte]], classOf[WithIdentifier[Catalog.Entry]])
+    sc.newAPIHadoopRDD(
+      conf,
+      classOf[LakeFSInputFormat],
+      classOf[Array[Byte]],
+      classOf[WithIdentifier[Catalog.Entry]],
+    )
   }
+
   def newDF(
-             spark: SparkSession,
-             repoName: String,
-             commitID: String
-           ): DataFrame = {
+      spark: SparkSession,
+      repoName: String,
+      commitID: String,
+  ): DataFrame = {
     val rdd = newRDD(spark.sparkContext, repoName, commitID).map { pair =>
       val key = pair._1
       val entry = pair._2.message
@@ -55,9 +62,9 @@ object LakeFSContext {
         entry.getAddress,
         entry.getETag,
         new java.sql.Timestamp(
-          TimeUnit.SECONDS.toMillis(entry.getLastModified.getSeconds)
+          TimeUnit.SECONDS.toMillis(entry.getLastModified.getSeconds),
         ),
-        entry.getSize
+        entry.getSize,
       )
     }
     val schema = new StructType()
@@ -69,4 +76,3 @@ object LakeFSContext {
     spark.createDataFrame(rdd, schema)
   }
 }
-
