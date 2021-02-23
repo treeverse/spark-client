@@ -49,7 +49,7 @@ class GravelerSplit(var range: RangeData, var path: Path)
 
 class WithIdentifier[Proto <: Message](
     val id: Array[Byte],
-    val message: Proto
+    val message: Proto,
 ) {}
 
 class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
@@ -59,7 +59,7 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
 
   override def initialize(
       split: InputSplit,
-      context: TaskAttemptContext
+      context: TaskAttemptContext,
   ): Unit = {
     val localFile = File.createTempFile("lakefs", "range")
     localFile.deleteOnExit()
@@ -93,7 +93,7 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
 
 object LakeFSInputFormat {
   private def read[Proto <: Message](
-      reader: SSTableReader[Proto]
+      reader: SSTableReader[Proto],
   ): Seq[Item[Proto]] =
     reader.newIterator().toSeq
 }
@@ -109,7 +109,7 @@ class LakeFSInputFormat
     val apiClient = new ApiClient(
       conf.get(LAKEFS_CONF_API_URL_KEY),
       conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY),
-      conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY)
+      conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY),
     )
     val metaRangeURL = apiClient.getMetaRangeURL(repoName, commitID)
     val p = new Path(metaRangeURL)
@@ -118,24 +118,24 @@ class LakeFSInputFormat
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
     val rangesReader = new SSTableReader(
       localFile.getAbsolutePath,
-      RangeData.newBuilder().build()
+      RangeData.newBuilder().build(),
     )
     localFile.delete()
     val ranges = read(rangesReader)
     ranges.map(r =>
       new GravelerSplit(
         r.message,
-        new Path(apiClient.getRangeURL(repoName, new String(r.id)))
+        new Path(apiClient.getRangeURL(repoName, new String(r.id))),
       )
       // Scala / JRE not strong enough to handle List<FileSplit> as List<InputSplit>;
       // explicitly upcast to generate Seq[InputSplit].
-        .asInstanceOf[InputSplit]
+        .asInstanceOf[InputSplit],
     )
   }.asJava
 
   override def createRecordReader(
       split: InputSplit,
-      context: TaskAttemptContext
+      context: TaskAttemptContext,
   ): RecordReader[Array[Byte], WithIdentifier[Catalog.Entry]] = {
     new EntryRecordReader(Catalog.Entry.getDefaultInstance)
   }
