@@ -12,10 +12,12 @@ import org.apache.hadoop.mapreduce._
 import java.io.{DataInput, DataOutput, File}
 import scala.collection.JavaConverters._
 
-class GravelerSplit(var range: RangeData, var path: Path) extends InputSplit with Writable {
+class GravelerSplit(var range: RangeData, var path: Path)
+    extends InputSplit
+    with Writable {
   def this() = this(null, null)
 
-  override def write(out: DataOutput) = {
+  override def write(out: DataOutput): Unit = {
     val encodedRange = range.toByteArray
     out.writeInt(encodedRange.length)
     out.write(encodedRange)
@@ -24,7 +26,7 @@ class GravelerSplit(var range: RangeData, var path: Path) extends InputSplit wit
     out.writeChars(p)
   }
 
-  override def readFields(in: DataInput) = {
+  override def readFields(in: DataInput): Unit = {
     val encodedRangeLength = in.readInt()
     val encodedRange = new Array[Byte](encodedRangeLength)
     in.readFully(encodedRange)
@@ -41,23 +43,32 @@ class GravelerSplit(var range: RangeData, var path: Path) extends InputSplit wit
 
   override def getLocations: Array[String] = Array.empty[String]
 
-  override def getLocationInfo: Array[SplitLocationInfo] = Array.empty[SplitLocationInfo]
+  override def getLocationInfo: Array[SplitLocationInfo] =
+    Array.empty[SplitLocationInfo]
 }
 
-class WithIdentifier[Proto <: Message](val id: Array[Byte], val message: Proto) {}
+class WithIdentifier[Proto <: Message](
+    val id: Array[Byte],
+    val message: Proto
+) {}
 
-class EntryRecordReader[Proto <: Message](messagePrototype: Proto) extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
-  var it: SSTableIterator[Proto] = null
-  var item: Item[Proto] = null
+class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
+    extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
+  var it: SSTableIterator[Proto] = _
+  var item: Item[Proto] = _
 
-  override def initialize(split: InputSplit, context: TaskAttemptContext) = {
+  override def initialize(
+      split: InputSplit,
+      context: TaskAttemptContext
+  ): Unit = {
     val localFile = File.createTempFile("lakefs", "range")
     localFile.deleteOnExit()
     val gravelerSplit = split.asInstanceOf[GravelerSplit]
     val fs = gravelerSplit.path.getFileSystem(context.getConfiguration)
     fs.copyToLocalFile(gravelerSplit.path, new Path(localFile.getAbsolutePath))
     // TODO(johnnyaug) should we cache this?
-    val sstableReader = new SSTableReader(localFile.getAbsolutePath, messagePrototype)
+    val sstableReader =
+      new SSTableReader(localFile.getAbsolutePath, messagePrototype)
     it = sstableReader.newIterator()
   }
 
@@ -65,15 +76,15 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto) extends Recor
     if (!it.hasNext) {
       return false
     }
-    item = it.next
-    return true
+    item = it.next()
+    true
   }
 
-  override def getCurrentKey = item.key
+  override def getCurrentKey: Array[Byte] = item.key
 
   override def getCurrentValue = new WithIdentifier(item.id, item.message)
 
-  override def close = it.close
+  override def close(): Unit = it.close
 
   override def getProgress: Float = {
     0 // TODO(johnnyaug) complete
@@ -81,37 +92,51 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto) extends Recor
 }
 
 object LakeFSInputFormat {
-  private def read[Proto <: Message](reader: SSTableReader[Proto]): Seq[Item[Proto]] =
-    reader.newIterator.toSeq
+  private def read[Proto <: Message](
+      reader: SSTableReader[Proto]
+  ): Seq[Item[Proto]] =
+    reader.newIterator().toSeq
 }
 
-class LakeFSInputFormat extends InputFormat[Array[Byte], WithIdentifier[Catalog.Entry]] {
+class LakeFSInputFormat
+    extends InputFormat[Array[Byte], WithIdentifier[Catalog.Entry]] {
   import LakeFSInputFormat._
 
   override def getSplits(job: JobContext): java.util.List[InputSplit] = {
     val conf = job.getConfiguration
     val repoName = conf.get(LAKEFS_CONF_JOB_REPO_NAME_KEY)
     val commitID = conf.get(LAKEFS_CONF_JOB_COMMIT_ID_KEY)
-    val apiClient = new ApiClient(conf.get(LAKEFS_CONF_API_URL_KEY),
+    val apiClient = new ApiClient(
+      conf.get(LAKEFS_CONF_API_URL_KEY),
       conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY),
-      conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY))
+      conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY)
+    )
     val metaRangeURL = apiClient.getMetaRangeURL(repoName, commitID)
     val p = new Path(metaRangeURL)
     val fs = p.getFileSystem(job.getConfiguration)
     val localFile = File.createTempFile("lakefs", "metarange")
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
-    val rangesReader = new SSTableReader(localFile.getAbsolutePath, RangeData.newBuilder().build())
+    val rangesReader = new SSTableReader(
+      localFile.getAbsolutePath,
+      RangeData.newBuilder().build()
+    )
     localFile.delete()
     val ranges = read(rangesReader)
-    ranges.map(
-      r => new GravelerSplit(r.message, new Path(apiClient.getRangeURL(repoName, new String(r.id))))
-        // Scala / JRE not strong enough to handle List<FileSplit> as List<InputSplit>;
-        // explicitly upcast to generate Seq[InputSplit].
+    ranges.map(r =>
+      new GravelerSplit(
+        r.message,
+        new Path(apiClient.getRangeURL(repoName, new String(r.id)))
+      )
+      // Scala / JRE not strong enough to handle List<FileSplit> as List<InputSplit>;
+      // explicitly upcast to generate Seq[InputSplit].
         .asInstanceOf[InputSplit]
     )
   }.asJava
 
-  override def createRecordReader(split: InputSplit, context: TaskAttemptContext): RecordReader[Array[Byte], WithIdentifier[Catalog.Entry]] = {
+  override def createRecordReader(
+      split: InputSplit,
+      context: TaskAttemptContext
+  ): RecordReader[Array[Byte], WithIdentifier[Catalog.Entry]] = {
     new EntryRecordReader(Catalog.Entry.getDefaultInstance)
   }
 }
