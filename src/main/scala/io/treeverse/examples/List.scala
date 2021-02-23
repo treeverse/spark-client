@@ -11,7 +11,7 @@ object List extends App {
 
   override def main(args: Array[String]) {
     if (args.length != 2) {
-      Console.err.println("Usage: ... <repo_name> <commit_id>")
+      Console.err.println("Usage: ... <repo_name> <commit_id> s3://path/to/output/du")
       System.exit(1)
     }
     val spark = SparkSession.builder().appName("I can list")
@@ -28,9 +28,8 @@ object List extends App {
       .map({ case (_, ds) => ds })
       .reduceByKey(_ + _)
 
-
-    size.top(100000)
-      .collect({ case (path, size) => Console.printf("%s\t%d\n", path, size) })
+    size.map({ case (path, size) => Console.printf("%s\t%d\n", path, size) })
+      .saveAsTextFile(args(2))
 
     sc.stop()
   }
