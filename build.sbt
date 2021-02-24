@@ -8,17 +8,26 @@ Compile / PB.targets := Seq(
   PB.gens.java -> (Compile / sourceManaged).value
 )
 
-libraryDependencies += "org.rocksdb" % "rocksdbjni" % "6.6.4"
-libraryDependencies += "commons-codec" % "commons-codec" % "1.15"
-libraryDependencies += "org.apache.spark" %% "spark-sql" % "3.0.1"
-libraryDependencies +=  "com.google.protobuf" % "protobuf-java" % "3.14.0" % "protobuf"
-libraryDependencies += "org.apache.hadoop" % "hadoop-aws" % "2.7.3"
-libraryDependencies += "org.scalaj" %% "scalaj-http" % "2.4.2"
-libraryDependencies += "org.json4s" %% "json4s-native" % "3.7.0-M8"
-libraryDependencies += "com.google.guava" % "guava" % "30.1-jre"
+// Use an older JDK to be Spark compatible
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
+
+libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
+  "commons-codec" % "commons-codec" % "1.15",
+  "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
+  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.10.4",
+  "org.apache.hadoop" % "hadoop-aws" % "2.7.3",
+  "org.scalaj" %% "scalaj-http" % "2.4.2",
+  "org.json4s" %% "json4s-native" % "3.7.0-M8",
+  "com.google.guava" % "guava" % "30.1-jre",
+)
+
+assembly / assemblyMergeStrategy := (_ => MergeStrategy.first)
 
 assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll
+  ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll,
+  ShadeRule.rename("com.google.protobuf.**" -> "shadeproto.@1").inAll,
+  ShadeRule.rename("scala.collection.compat.**" -> "shadecompat.@1").inAll,
 )
 
 // Set credentials in this file to be able to publish from your machine.

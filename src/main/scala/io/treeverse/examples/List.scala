@@ -11,23 +11,27 @@ object List extends App {
 
   override def main(args: Array[String]) {
     if (args.length != 2) {
-      Console.err.println("Usage: ... <repo_name> <commit_id>")
+      Console.err.println("Usage: ... <repo_name> <commit_id> s3://path/to/output/du")
       System.exit(1)
     }
-    val spark = SparkSession.builder().master("local").appName("I can list")
+    val spark = SparkSession.builder().appName("I can list")
       .config("spark.hadoop.lakefs.api.url", "http://localhost:8000/api/v1/")
       .config("spark.hadoop.lakefs.api.access_key", "...")
       .config("spark.hadoop.lakefs.api.secret_key", "...")
       .getOrCreate()
     val sc = spark.sparkContext
-     val repo = args(0)
-     val ref = args(1)
-     val files = LakeFSContext.newRDD(sc, repo, ref)
-    val count = files.flatMapValues(entry => dirs(entry.message.getAddress))
-      .map({ case (_, s) => s })
-      .countByValue
+    val repo = args(0)
+    val ref = args(1)
+    val outputPath = args(2)
+    val files = LakeFSContext.newRDD(sc, repo, ref)
 
-    count.collect({ case (path, count) => Console.printf("%s\t%d\n", path, count) })
+    val size = files.flatMapValues(entry => dirs(entry.message.getAddress).map(d => (d, entry.message.getSize())))
+      .map({ case (_, ds) => ds })
+      .reduceByKey(_ + _)
+
+    size.saveAsTextFile(outputPath)
+
+    size.top(100).foreach({ case (path, size) => Console.printf("%s\t%d\n", path, size) })
 
     sc.stop()
   }

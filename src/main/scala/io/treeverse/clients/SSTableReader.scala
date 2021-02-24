@@ -10,6 +10,14 @@ import java.io.Closeable
 
 class Item[Proto <: Message](val key: Array[Byte], val id: Array[Byte], val message: Proto)
 
+private object local {
+  def readNBytes(s: DataInputStream, n: Int): Array[Byte] = {
+    val ret = new Array[Byte](n)
+    s.readFully(ret)
+    ret
+  }
+}
+
 class SSTableIterator[Proto <: Message](val it: SstFileReaderIterator, val messagePrototype: Proto) extends Iterator[Item[Proto]] with Closeable {
   // TODO(ariels): explicitly make it closeable, and figure out how to close it when used by
   //     Spark.
@@ -22,9 +30,9 @@ class SSTableIterator[Proto <: Message](val it: SstFileReaderIterator, val messa
     val key = it.key()
     val dis = new DataInputStream(bais)
     val identityLength = VarInt.readSignedVarLong(dis)
-    val id = dis.readNBytes(identityLength.toInt)
+    val id = local.readNBytes(dis, identityLength.toInt)
     val dataLength = VarInt.readSignedVarLong(dis)
-    val data = dis.readNBytes(dataLength.toInt)
+    val data = local.readNBytes(dis, dataLength.toInt)
     // TODO(ariels): Error if dis is not exactly at end?  (But then cannot add more fields in
     //     future, sigh...)
 
