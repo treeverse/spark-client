@@ -28,17 +28,17 @@ object LakeFSContext {
     conf.set(LAKEFS_CONF_JOB_COMMIT_ID_KEY, commitID)
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_URL_KEY))) {
       throw new InvalidJobConfException(
-        s"${LAKEFS_CONF_API_URL_KEY} must not be empty",
+        s"$LAKEFS_CONF_API_URL_KEY must not be empty",
       )
     }
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY))) {
       throw new InvalidJobConfException(
-        s"${LAKEFS_CONF_API_ACCESS_KEY_KEY} must not be empty",
+        s"$LAKEFS_CONF_API_ACCESS_KEY_KEY must not be empty",
       )
     }
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY))) {
       throw new InvalidJobConfException(
-        s"${LAKEFS_CONF_API_SECRET_KEY_KEY} must not be empty",
+        s"$LAKEFS_CONF_API_SECRET_KEY_KEY must not be empty",
       )
     }
     sc.newAPIHadoopRDD(
@@ -54,11 +54,10 @@ object LakeFSContext {
       repoName: String,
       commitID: String,
   ): DataFrame = {
-    val rdd = newRDD(spark.sparkContext, repoName, commitID).map { pair =>
-      val key = pair._1
-      val entry = pair._2.message
+    val rdd = newRDD(spark.sparkContext, repoName, commitID).map { case (k, v) =>
+      val entry = v.message
       Row(
-        new String(key),
+        new String(k),
         entry.getAddress,
         entry.getETag,
         new java.sql.Timestamp(
@@ -70,7 +69,7 @@ object LakeFSContext {
     val schema = new StructType()
       .add(StructField("key", StringType))
       .add(StructField("address", StringType))
-      .add(StructField("e_tag", StringType))
+      .add(StructField("etag", StringType))
       .add(StructField("last_modified", TimestampType))
       .add(StructField("size", LongType))
     spark.createDataFrame(rdd, schema)
