@@ -6,7 +6,10 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.InvalidJobConfException
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+
+import java.util.concurrent.TimeUnit
 
 object LakeFSContext {
   val LAKEFS_CONF_API_URL_KEY = "lakefs.api.url"
@@ -25,17 +28,17 @@ object LakeFSContext {
     conf.set(LAKEFS_CONF_JOB_COMMIT_ID_KEY, commitID)
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_URL_KEY))) {
       throw new InvalidJobConfException(
-        s"${LAKEFS_CONF_API_URL_KEY} must not be empty",
+        s"$LAKEFS_CONF_API_URL_KEY must not be empty",
       )
     }
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY))) {
       throw new InvalidJobConfException(
-        s"${LAKEFS_CONF_API_ACCESS_KEY_KEY} must not be empty",
+        s"$LAKEFS_CONF_API_ACCESS_KEY_KEY must not be empty",
       )
     }
     if (StringUtils.isBlank(conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY))) {
       throw new InvalidJobConfException(
-        s"${LAKEFS_CONF_API_SECRET_KEY_KEY} must not be empty",
+        s"$LAKEFS_CONF_API_SECRET_KEY_KEY must not be empty",
       )
     }
     sc.newAPIHadoopRDD(
@@ -44,5 +47,31 @@ object LakeFSContext {
       classOf[Array[Byte]],
       classOf[WithIdentifier[Catalog.Entry]],
     )
+  }
+
+  def newDF(
+      spark: SparkSession,
+      repoName: String,
+      commitID: String,
+  ): DataFrame = {
+    val rdd = newRDD(spark.sparkContext, repoName, commitID).map { case (k, v) =>
+      val entry = v.message
+      Row(
+        new String(k),
+        entry.getAddress,
+        entry.getETag,
+        new java.sql.Timestamp(
+          TimeUnit.SECONDS.toMillis(entry.getLastModified.getSeconds),
+        ),
+        entry.getSize,
+      )
+    }
+    val schema = new StructType()
+      .add(StructField("key", StringType))
+      .add(StructField("address", StringType))
+      .add(StructField("etag", StringType))
+      .add(StructField("last_modified", TimestampType))
+      .add(StructField("size", LongType))
+    spark.createDataFrame(rdd, schema)
   }
 }
