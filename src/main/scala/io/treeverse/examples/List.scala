@@ -22,14 +22,16 @@ object List extends App {
     val sc = spark.sparkContext
     val repo = args(0)
     val ref = args(1)
+    val outputPath = args(2)
     val files = LakeFSContext.newRDD(sc, repo, ref)
 
     val size = files.flatMapValues(entry => dirs(entry.message.getAddress).map(d => (d, entry.message.getSize())))
       .map({ case (_, ds) => ds })
       .reduceByKey(_ + _)
 
-    size.map({ case (path, size) => Console.printf("%s\t%d\n", path, size) })
-      .saveAsTextFile(args(2))
+    size.saveAsTextFile(outputPath)
+
+    size.top(100).foreach({ case (path, size) => Console.printf("%s\t%d\n", path, size) })
 
     sc.stop()
   }
