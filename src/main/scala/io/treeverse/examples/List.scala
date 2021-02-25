@@ -4,18 +4,6 @@ import io.treeverse.clients.LakeFSContext
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.SparkConf
 
-class ConfFromEnv(private val kvs: Seq[(String, String)]) {
-  def this() = this(Seq.empty)
-
-  def build(): SparkConf = new SparkConf().setAll(kvs)
-
-  def env(name: String, envName: String) =
-    if (sys.env.contains(envName)) new ConfFromEnv(kvs :+ name -> sys.env(envName)) else this
-
-  def envOr(name: String, envName: String, default: String) =
-    new ConfFromEnv(kvs :+ name -> sys.env.getOrElse(envName, default))
-}
-
 object List extends App {
   private def dirs(path: String): Seq[String] =
     path.split("/")
@@ -27,13 +15,7 @@ object List extends App {
       Console.err.println("Usage: ... <repo_name> <commit_id> s3://path/to/output/du")
       System.exit(1)
     }
-    val conf = new ConfFromEnv()
-      .envOr ("spark.hadoop.lakefs.api.url", "LAKEFS_API_URL", "http://localhost:8000/api/v1/")
-      .env ("spark.hadoop.lakefs.api.access_key", "LAKEFS_ACCESS_KEY_ID")
-      .env ("spark.hadoop.lakefs.api.secret_key", "LAKEFS_SECRET_ACCESS_KEY")
-      .build()
-
-    val spark = SparkSession.builder().appName("I can list").config(conf).getOrCreate()
+    val spark = SparkSession.builder().appName("I can list").getOrCreate()
 
     val sc = spark.sparkContext
     val repo = args(0)
