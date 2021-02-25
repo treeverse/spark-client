@@ -46,4 +46,7 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / organization := "io.treeverse"
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
+// Currently cannot publish docs, possibly need to shade Google protobufs better
+Compile / packageDoc / publishArtifact := false
+
 publishTo := Some("Metadata Client repository" at "https://maven.pkg.github.com/treeverse/spark-client/metadata-client")
