@@ -15,7 +15,8 @@ scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
 libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "commons-codec" % "commons-codec" % "1.15",
   "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
-  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.10.4",
+  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.10.4" % "protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime" % "0.10.4" % "protobuf",
   "org.apache.hadoop" % "hadoop-aws" % "2.7.3",
   "org.scalaj" %% "scalaj-http" % "2.4.2",
   "org.json4s" %% "json4s-native" % "3.7.0-M8",
@@ -27,6 +28,7 @@ assembly / assemblyMergeStrategy := (_ => MergeStrategy.first)
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll,
   ShadeRule.rename("com.google.protobuf.**" -> "shadeproto.@1").inAll,
+  ShadeRule.rename("com.google.common.**" -> "shadegooglecommon.@1").inAll,
   ShadeRule.rename("scala.collection.compat.**" -> "shadecompat.@1").inAll,
 )
 
