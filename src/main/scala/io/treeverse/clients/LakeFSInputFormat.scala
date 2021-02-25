@@ -61,7 +61,7 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
       split: InputSplit,
       context: TaskAttemptContext,
   ): Unit = {
-    val localFile = File.createTempFile("lakefs", "range")
+    val localFile = File.createTempFile("lakefs.", ".range")
     localFile.deleteOnExit()
     val gravelerSplit = split.asInstanceOf[GravelerSplit]
     val fs = gravelerSplit.path.getFileSystem(context.getConfiguration)
@@ -113,8 +113,9 @@ class LakeFSInputFormat
     )
     val metaRangeURL = apiClient.getMetaRangeURL(repoName, commitID)
     val p = new Path(metaRangeURL)
+
     val fs = p.getFileSystem(job.getConfiguration)
-    val localFile = File.createTempFile("lakefs", "metarange")
+    val localFile = File.createTempFile("lakefs.", ".metarange")
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
     val rangesReader = new SSTableReader(
       localFile.getAbsolutePath,

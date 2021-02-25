@@ -24,11 +24,18 @@ class ApiClient(apiUrl: String, accessKey: String, secretKey: String) {
 
   def getMetaRangeURL(repoName: String, commitID: String): String = {
     val getCommitURI = URI.create("%s/repositories/%s/commits/%s".format(apiUrl, repoName, commitID)).normalize()
-    var resp = Http(getCommitURI.toString).header("Accept", "application/json").auth(accessKey, secretKey).asString
-    val JString(metaRangeID) = parse(resp.body) \ "meta_range_id"
+    val commitResp = Http(getCommitURI.toString).header("Accept", "application/json").auth(accessKey, secretKey).asString
+    val commit = parse(commitResp.body)
+    val metaRangeID = commit \ "meta_range_id" match {
+      case JString(metaRangeID) => metaRangeID
+      case _ => // TODO(ariels): Bad parse exception type
+        throw new RuntimeException(s"expected string meta_range_id in ${commitResp.body}")
+    }
+
     val getMetaRangeURI = URI.create("%s/repositories/%s/metadata/meta_range/%s".format(apiUrl, repoName, metaRangeID)).normalize()
-    resp = Http(getMetaRangeURI.toString).header("Accept", "application/json").auth(accessKey, secretKey).asString
-    URI.create(getStorageNamespace(repoName) + "/" + resp.header("Location").get).normalize().toString
+    val metaRangeResp = Http(getMetaRangeURI.toString).header("Accept", "application/json").auth(accessKey, secretKey).asString
+    val location = metaRangeResp.header("Location").get
+    URI.create(getStorageNamespace(repoName) + "/" + location).normalize().toString
   }
 
   def getRangeURL(repoName: String, rangeID: String): String = {
