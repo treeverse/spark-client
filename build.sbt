@@ -29,7 +29,9 @@ assembly / assemblyMergeStrategy := (_ => MergeStrategy.first)
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll,
   ShadeRule.rename("com.google.protobuf.**" -> "shadeproto.@1").inAll,
-  ShadeRule.rename("com.google.common.**" -> "shadegooglecommon.@1").inLibrary("com.google.guava" % "guava" % "30.1-jre").inProject,
+  ShadeRule.rename("com.google.common.**" -> "shadegooglecommon.@1")
+    .inLibrary("com.google.guava" % "guava" % "30.1-jre", "com.google.guava" % "failureaccess" % "1.0.1")
+    .inProject,
   ShadeRule.rename("scala.collection.compat.**" -> "shadecompat.@1").inAll,
 )
 
