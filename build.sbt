@@ -1,18 +1,25 @@
 name := "lakefs-spark-client"
 scalaVersion := "2.12.10"
 
-Compile / PB.includePaths += (Compile / resourceDirectory).value
-Compile / PB.protoSources += (Compile / resourceDirectory).value
-
-Compile / PB.targets := Seq(
-  PB.gens.java -> (Compile / sourceManaged).value
-)
+lazy val core = (project in file("core"))
+  .settings(
+    Compile / PB.includePaths += (Compile / resourceDirectory).value,
+    Compile / PB.protoSources += (Compile / resourceDirectory).value,
+    Compile / PB.targets := Seq(
+      PB.gens.java -> (Compile / sourceManaged).value
+    ),
+    assemblySettings,
+  )
+lazy val examples = (project in file("examples")).dependsOn(core)
+  .settings(
+    assemblySettings,
+  )
 
 // Use an older JDK to be Spark compatible
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
 
-libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
+core / libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "commons-codec" % "commons-codec" % "1.15",
   "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
   "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.10.4" % "protobuf",
@@ -25,15 +32,20 @@ libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "com.google.guava" % "failureaccess" % "1.0.1",
 )
 
-assembly / assemblyMergeStrategy := (_ => MergeStrategy.first)
+examples / libraryDependencies ++= Seq(
+  "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
+)
 
-assemblyShadeRules in assembly := Seq(
-  ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll,
-  ShadeRule.rename("com.google.protobuf.**" -> "shadeproto.@1").inAll,
-  ShadeRule.rename("com.google.common.**" -> "shadegooglecommon.@1")
-    .inLibrary("com.google.guava" % "guava" % "30.1-jre", "com.google.guava" % "failureaccess" % "1.0.1")
-    .inProject,
-  ShadeRule.rename("scala.collection.compat.**" -> "shadecompat.@1").inAll,
+lazy val assemblySettings = Seq(
+  assembly / assemblyMergeStrategy := (_ => MergeStrategy.first),
+  assembly / assemblyShadeRules := Seq(
+    ShadeRule.rename("org.apache.http.**" -> "org.apache.httpShaded@1").inAll,
+    ShadeRule.rename("com.google.protobuf.**" -> "shadeproto.@1").inAll,
+    ShadeRule.rename("com.google.common.**" -> "shadegooglecommon.@1")
+      .inLibrary("com.google.guava" % "guava" % "30.1-jre", "com.google.guava" % "failureaccess" % "1.0.1")
+      .inProject,
+    ShadeRule.rename("scala.collection.compat.**" -> "shadecompat.@1").inAll,
+  ),
 )
 
 // Set credentials in this file to be able to publish from your machine.
