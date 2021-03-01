@@ -8,11 +8,11 @@ lazy val core = (project in file("core"))
     Compile / PB.targets := Seq(
       PB.gens.java -> (Compile / sourceManaged).value
     ),
-    assemblySettings,
+    sharedSettings,
   )
 lazy val examples = (project in file("examples")).dependsOn(core)
   .settings(
-    assemblySettings,
+    sharedSettings,
   )
 
 // Use an older JDK to be Spark compatible
@@ -48,21 +48,25 @@ lazy val assemblySettings = Seq(
   ),
 )
 
-// Set credentials in this file to be able to publish from your machine.
-//
-// It should contain these lines (unindented):
-//    realm=GitHub Package Registry
-//    host=maven.pkg.github.com
-//    user=YOUR-GITHUB-USERNAME
-//    password=Token from https://github.com/settings/tokens (NOT your password)
+// Don't publish root project
+publish / skip := true
 
-credentials += Credentials(Path.userHome / ".sbt" / "credentials")
+lazy val publishSettings = Seq(
+  // Currently cannot publish docs, possibly need to shade Google protobufs better
+  Compile / packageDoc / publishArtifact := false,
+  publishTo := Some("Metadata Client repository" at "https://maven.pkg.github.com/treeverse/spark-client/metadata-client"),
+  // Set credentials in this file to be able to publish from your machine.
+  //
+  // It should contain these lines (unindented):
+  //    realm=GitHub Package Registry
+  //    host=maven.pkg.github.com
+  //    user=YOUR-GITHUB-USERNAME
+  //    password=Token from https://github.com/settings/tokens (NOT your password)
+  credentials += Credentials(Path.userHome / ".sbt" / "credentials"),
+)
+
+lazy val sharedSettings = assemblySettings ++ publishSettings
 
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / organization := "io.treeverse"
 ThisBuild / version := "0.1.0-SNAPSHOT"
-
-// Currently cannot publish docs, possibly need to shade Google protobufs better
-Compile / packageDoc / publishArtifact := false
-
-publishTo := Some("Metadata Client repository" at "https://maven.pkg.github.com/treeverse/spark-client/metadata-client")
