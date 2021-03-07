@@ -119,7 +119,7 @@ class LakeFSInputFormat
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
     val rangesReader = new SSTableReader(
       localFile.getAbsolutePath,
-      RangeData.newBuilder().build(),
+      RangeData.getDefaultInstance,
     )
     localFile.delete()
     val ranges = read(rangesReader)
