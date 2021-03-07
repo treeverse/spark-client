@@ -1,13 +1,13 @@
 package io.treeverse.clients
 
-import com.google.protobuf.Message
-import io.treeverse.catalog.Catalog
+import io.treeverse.catalog.Entry
 import io.treeverse.clients.LakeFSContext._
-import io.treeverse.committed.Committed.RangeData
+import io.treeverse.committed.RangeData
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapred.SplitLocationInfo
 import org.apache.hadoop.mapreduce._
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.{DataInput, DataOutput, File}
 import scala.collection.JavaConverters._
@@ -39,7 +39,7 @@ class GravelerSplit(var range: RangeData, var path: Path)
     path = new Path(p.result)
   }
 
-  override def getLength: Long = range.getEstimatedSize
+  override def getLength: Long = range.estimatedSize
 
   override def getLocations: Array[String] = Array.empty[String]
 
@@ -47,15 +47,15 @@ class GravelerSplit(var range: RangeData, var path: Path)
     Array.empty[SplitLocationInfo]
 }
 
-class WithIdentifier[Proto <: Message](
+class WithIdentifier[T <: GeneratedMessage](
     val id: Array[Byte],
-    val message: Proto,
+    val message: T,
 ) {}
 
-class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
-    extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
-  var it: SSTableIterator[Proto] = _
-  var item: Item[Proto] = _
+class EntryRecordReader[T <: GeneratedMessage](messagePrototype: GeneratedMessageCompanion[T])
+    extends RecordReader[Array[Byte], WithIdentifier[T]] {
+  var it: SSTableIterator[T] = _
+  var item: Item[T] = _
 
   override def initialize(
       split: InputSplit,
@@ -92,14 +92,14 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
 }
 
 object LakeFSInputFormat {
-  private def read[Proto <: Message](
-      reader: SSTableReader[Proto],
-  ): Seq[Item[Proto]] =
+  private def read[T <: GeneratedMessage](
+      reader: SSTableReader[T],
+  ): Seq[Item[T]] =
     reader.newIterator().toSeq
 }
 
 class LakeFSInputFormat
-    extends InputFormat[Array[Byte], WithIdentifier[Catalog.Entry]] {
+    extends InputFormat[Array[Byte], WithIdentifier[Entry]] {
   import LakeFSInputFormat._
 
   override def getSplits(job: JobContext): java.util.List[InputSplit] = {
@@ -119,7 +119,7 @@ class LakeFSInputFormat
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
     val rangesReader = new SSTableReader(
       localFile.getAbsolutePath,
-      RangeData.getDefaultInstance,
+      RangeData.messageCompanion,
     )
     localFile.delete()
     val ranges = read(rangesReader)
@@ -137,7 +137,7 @@ class LakeFSInputFormat
   override def createRecordReader(
       split: InputSplit,
       context: TaskAttemptContext,
-  ): RecordReader[Array[Byte], WithIdentifier[Catalog.Entry]] = {
-    new EntryRecordReader(Catalog.Entry.getDefaultInstance)
+  ): RecordReader[Array[Byte], WithIdentifier[Entry]] = {
+    new EntryRecordReader(Entry.messageCompanion)
   }
 }
