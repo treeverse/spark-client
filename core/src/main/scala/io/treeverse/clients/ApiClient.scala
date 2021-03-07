@@ -7,9 +7,10 @@ import scalaj.http.Http
 
 import java.net.URI
 import java.time.Duration
+import java.util.concurrent.TimeUnit
 
 class ApiClient(apiUrl: String, accessKey: String, secretKey: String) {
-  private val storageNamespaceCache = CacheBuilder.newBuilder().expireAfterWrite(Duration.ofMinutes(2)).build[String, String]()
+  private val storageNamespaceCache = CacheBuilder.newBuilder().expireAfterWrite(2, TimeUnit.MINUTES).build[String, String]()
 
   private def getStorageNamespace(repoName: String): String = {
     storageNamespaceCache.get(repoName, () => {
