@@ -14,6 +14,9 @@ lazy val examples = (project in file("examples")).dependsOn(core)
   .settings(
     sharedSettings,
   )
+  .settings(
+    mainClass in assembly := Some("io.treeverse.examples.List"),
+  )
 
 // Use an older JDK to be Spark compatible
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
@@ -22,13 +25,13 @@ scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
 core / libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "commons-codec" % "commons-codec" % "1.15",
   "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
-  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.10.4" % "protobuf",
+  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.11.0-RC1",
   "com.thesamet.scalapb" %% "scalapb-runtime" % "0.10.4" % "protobuf",
-  "org.apache.hadoop" % "hadoop-aws" % "2.10.1",
-  "org.apache.hadoop" % "hadoop-common" % "2.10.1",
+  "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
+  "org.apache.hadoop" % "hadoop-common" % "2.7.7",
   "org.scalaj" %% "scalaj-http" % "2.4.2",
   "org.json4s" %% "json4s-native" % "3.7.0-M8",
-  "com.google.guava" % "guava" % "30.1-jre",
+  "com.google.guava" % "guava" % "16.0.1",
   "com.google.guava" % "failureaccess" % "1.0.1",
 )
 
