@@ -10,6 +10,7 @@ lazy val core = (project in file("core"))
     ),
     sharedSettings,
   )
+  .settings(fatPublishSettings)
 lazy val examples = (project in file("examples")).dependsOn(core)
   .settings(
     sharedSettings,
@@ -17,6 +18,7 @@ lazy val examples = (project in file("examples")).dependsOn(core)
   .settings(
     mainClass in assembly := Some("io.treeverse.examples.List"),
   )
+  .settings(fatPublishSettings)
 
 // Use an older JDK to be Spark compatible
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
@@ -53,6 +55,18 @@ lazy val assemblySettings = Seq(
 
 // Don't publish root project
 publish / skip := true
+
+val fatPublishSettings = {
+  // Publish fat jars: these are Spark client libraries, which require shading to work.
+  // sbt-assembly says not to publish fat jars, but particular sparksql-scalapb says to
+  // publish them.  Go with what works :-/
+  artifact in (Compile, assembly) := {
+    val art = (artifact in (Compile, assembly)).value
+    art.withClassifier(Some("assembly"))
+  }
+
+  addArtifact(artifact in (Compile, assembly), assembly)
+}
 
 lazy val publishSettings = Seq(
   // Currently cannot publish docs, possibly need to shade Google protobufs better
