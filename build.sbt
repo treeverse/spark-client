@@ -54,19 +54,60 @@ publish / skip := true
 lazy val publishSettings = Seq(
   // Currently cannot publish docs, possibly need to shade Google protobufs better
   Compile / packageDoc / publishArtifact := false,
-  publishTo := Some("Metadata Client repository" at "https://maven.pkg.github.com/treeverse/spark-client/metadata-client"),
-  // Set credentials in this file to be able to publish from your machine.
-  //
-  // It should contain these lines (unindented):
-  //    realm=GitHub Package Registry
-  //    host=maven.pkg.github.com
-  //    user=YOUR-GITHUB-USERNAME
-  //    password=Token from https://github.com/settings/tokens (NOT your password)
-  credentials += Credentials(Path.userHome / ".sbt" / "credentials"),
+  publishTo := {
+    val nexus = "https://s01.oss.sonatype.org/"
+    if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
+    else Some("releases" at nexus + "service/local/staging/deploy/maven2")
+  },
+  // Remove all additional repository other than Maven Central from POM
+  pomIncludeRepository := { _ => false },
+)
+
+ThisBuild / scmInfo := Some(
+  ScmInfo(
+    url("https://github.com/treeverse/spark-client"),
+    "scm:git@github.com:treeverse/spark-client.git"
+  )
+)
+ThisBuild / developers := List(
+  Developer(
+    id    = "ariels",
+    name  = "Ariel Shaqed (Scolnicov)",
+    email = "ariels@treeverse.io",
+    url   = url("https://github.com/arielshaqed")
+  ),
+  Developer(
+    id    = "baraktr",
+    name  = "B. A.",
+    email = "barak.amar@treeverse.io",
+    url   = url("https://github.com/nopcoder"),
+  ),
+  Developer(
+    id    = "ozkatz",
+    name  = "Oz Katz",
+    email = "oz.katz@treeverse.io",
+    url   = url("https://github.com/ozkatz"),
+  ),
+  Developer(
+    id    = "johnnyaug",
+    name  = "J. A.",
+    email = "yoni.augarten@treeverse.io",
+    url   = url("https://github.com/johnnyaug"),
+  ),
 )
 
 lazy val sharedSettings = assemblySettings ++ publishSettings
+credentials ++= Seq(
+  Credentials(Path.userHome / ".sbt" / "credentials"),
+  Credentials(Path.userHome / ".sbt" / "sonatype_credentials"),
+)
 
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / organization := "io.treeverse"
+ThisBuild / organizationName := "Treeverse Labs"
+ThisBuild / organizationHomepage := Some(url("http://treeverse.io"))
+ThisBuild / description := "Spark client for lakeFS object metadata."
+ThisBuild / licenses := List("Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt"))
+ThisBuild / homepage := Some(url("https://github.com/treeverse/spark-client"))
+
 ThisBuild / version := "0.1.0-SNAPSHOT"
