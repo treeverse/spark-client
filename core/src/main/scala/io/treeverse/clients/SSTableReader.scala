@@ -1,6 +1,6 @@
 package io.treeverse.clients
 
-import com.google.protobuf.{CodedInputStream, Message}
+import com.google.protobuf.CodedInputStream
 import org.rocksdb.{SstFileReader, _}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -22,7 +22,7 @@ class SSTableIterator[T <: GeneratedMessage](val it: SstFileReaderIterator, mess
   //     Spark.
   override def hasNext: Boolean = it.isValid
 
-  override def close = it.close
+  override def close() : Unit = it.close()
 
   override def next(): Item[T] = {
     val bais = new ByteArrayInputStream(it.value)
@@ -56,13 +56,13 @@ class SSTableReader[T <: GeneratedMessage](sstableFile: String, messagePrototype
   private val readOptions = new ReadOptions
   reader.open(sstableFile)
 
-  def close() = {
-    reader.close
-    options.close
-    readOptions.close
+  def close(): Unit = {
+    reader.close()
+    options.close()
+    readOptions.close()
   }
 
-  def getMetadata(): Map[String, String] = reader.getTableProperties.getUserCollectedProperties.asScala.toMap
+  def getMetadata: Map[String, String] = reader.getTableProperties.getUserCollectedProperties.asScala.toMap
 
   def newIterator(): SSTableIterator[T] = {
     val it = reader.newIterator(readOptions)

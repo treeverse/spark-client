@@ -52,8 +52,9 @@ class WithIdentifier[T <: GeneratedMessage](
     val message: T,
 ) {}
 
-class EntryRecordReader[T <: GeneratedMessage](messagePrototype: GeneratedMessageCompanion[T])
-    extends RecordReader[Array[Byte], WithIdentifier[T]] {
+class EntryRecordReader[T <: GeneratedMessage](
+    messagePrototype: GeneratedMessageCompanion[T],
+) extends RecordReader[Array[Byte], WithIdentifier[T]] {
   var it: SSTableIterator[T] = _
   var item: Item[T] = _
 

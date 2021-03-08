@@ -1,5 +1,3 @@
-import sbt.Keys.scalacOptions
-
 name := "lakefs-spark-client"
 scalaVersion := "2.12.10"
 
@@ -22,9 +20,13 @@ lazy val examples = (project in file("examples")).dependsOn(core)
   )
   .settings(fatPublishSettings)
 
+// Use an older JDK to be Spark compatible
+javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
+scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
+
 core / libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "commons-codec" % "commons-codec" % "1.15",
-  "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
+  "org.apache.spark" %% "spark-sql" % "3.0.1",
   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
   "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
   "org.apache.hadoop" % "hadoop-common" % "2.7.7",
@@ -48,7 +50,6 @@ lazy val assemblySettings = Seq(
       .inProject,
     ShadeRule.rename("scala.collection.compat.**" -> "shadecompat.@1").inAll,
   ),
-  assembly / assemblyOption := (assembly / assemblyOption).value.copy(includeScala = false)
 )
 
 // Don't publish root project
