@@ -47,16 +47,16 @@ class GravelerSplit(var range: RangeData, var path: Path)
     Array.empty[SplitLocationInfo]
 }
 
-class WithIdentifier[T <: GeneratedMessage](
+class WithIdentifier[Proto <: GeneratedMessage](
     val id: Array[Byte],
-    val message: T,
+    val message: Proto,
 ) {}
 
-class EntryRecordReader[T <: GeneratedMessage](
-    messagePrototype: GeneratedMessageCompanion[T],
-) extends RecordReader[Array[Byte], WithIdentifier[T]] {
-  var it: SSTableIterator[T] = _
-  var item: Item[T] = _
+class EntryRecordReader[Proto <: GeneratedMessage](
+    messagePrototype: GeneratedMessageCompanion[Proto],
+) extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
+  var it: SSTableIterator[Proto] = _
+  var item: Item[Proto] = _
 
   override def initialize(
       split: InputSplit,
@@ -85,7 +85,7 @@ class EntryRecordReader[T <: GeneratedMessage](
 
   override def getCurrentValue = new WithIdentifier(item.id, item.message)
 
-  override def close(): Unit = it.close
+  override def close(): Unit = it.close()
 
   override def getProgress: Float = {
     0 // TODO(johnnyaug) complete
@@ -93,9 +93,9 @@ class EntryRecordReader[T <: GeneratedMessage](
 }
 
 object LakeFSInputFormat {
-  private def read[T <: GeneratedMessage](
-      reader: SSTableReader[T],
-  ): Seq[Item[T]] =
+  private def read[Proto <: GeneratedMessage](
+      reader: SSTableReader[Proto],
+  ): Seq[Item[Proto]] =
     reader.newIterator().toSeq
 }
 
