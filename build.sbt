@@ -26,7 +26,7 @@ scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
 
 core / libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "commons-codec" % "commons-codec" % "1.15",
-  "org.apache.spark" %% "spark-sql" % "3.0.1",
+  "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
   "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
   "org.apache.hadoop" % "hadoop-common" % "2.7.7",
