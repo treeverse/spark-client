@@ -53,7 +53,7 @@ Alternatively, you can download the Jar from [here]().
    
    ```scala
     df.createOrReplaceTempView("files")
-    spark.sql("SELECT DATE(last_modified), COUNT(*) GROUP BY 1 ORDER BY 1")
+    spark.sql("SELECT DATE(last_modified), COUNT(*) FROM files GROUP BY 1 ORDER BY 1")
        /* output example:
           +----------+--------+
           |        dt|count(1)|
