@@ -6,7 +6,7 @@ lazy val core = (project in file("core"))
     Compile / PB.includePaths += (Compile / resourceDirectory).value,
     Compile / PB.protoSources += (Compile / resourceDirectory).value,
     Compile / PB.targets := Seq(
-      PB.gens.java -> (Compile / sourceManaged).value
+      scalapb.gen() -> (Compile / sourceManaged).value
     ),
     sharedSettings,
   )
@@ -27,8 +27,7 @@ scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
 core / libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "commons-codec" % "commons-codec" % "1.15",
   "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
-  "com.thesamet.scalapb" %% "sparksql-scalapb" % "0.11.0-RC1",
-  "com.thesamet.scalapb" %% "scalapb-runtime" % "0.10.4" % "protobuf",
+  "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
   "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
   "org.apache.hadoop" % "hadoop-common" % "2.7.7",
   "org.scalaj" %% "scalaj-http" % "2.4.2",
