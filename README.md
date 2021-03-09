@@ -5,7 +5,7 @@ Utilize the power of Spark to interact with the metadata on lakeFS. Possible use
 * Create a DataFrame for listing the objects in a specific commit or branch.
 * Compute changes between two commits.
 * Export your data for consumption outside lakeFS.
-* Bulk operations on underlying storage
+* Bulk operations on underlying storage.
 
 ## Getting Started
 Start Spark Shell / PySpark with the `--packages` flag:
