@@ -14,8 +14,6 @@ Start Spark Shell / PySpark with the `--packages` flag:
 spark-shell --packages io.treeverse:lakefs-spark-client_2.12:0.1.0-SNAPSHOT
 ```
 
-Alternatively, you can download the Jar from [here]().
-
 ## Configuration
 
 1. To read metadata from lakeFS, the client should be configured with your lakeFS endpoint and credentials, using the following Hadoop configurations:
