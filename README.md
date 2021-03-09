@@ -5,7 +5,6 @@ Utilize the power of Spark to interact with the metadata on lakeFS. Possible use
 * Create a DataFrame for listing the objects in a specific commit or branch.
 * Compute changes between two commits.
 * Export your data for consumption outside lakeFS.
-* Import existing data into lakeFS.
 * [Something with Retention]
 
 ## Getting Started
@@ -15,7 +14,7 @@ Start Spark Shell / PySpark with the `--packages` flag:
 spark-shell --packages io.treeverse:lakefs-spark-client_2.12:0.1.0-SNAPSHOT
 ```
 
-Alternatively, you can download the Jar from [here]()
+Alternatively, you can download the Jar from [here]().
 
 ## Configuration
 
