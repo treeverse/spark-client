@@ -1,8 +1,8 @@
 package io.treeverse.clients
 
-import io.treeverse.catalog.Entry
+import io.treeverse.lakefs.catalog.Entry
 import io.treeverse.clients.LakeFSContext._
-import io.treeverse.committed.RangeData
+import io.treeverse.lakefs.graveler.committed.RangeData
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapred.SplitLocationInfo
@@ -52,8 +52,7 @@ class WithIdentifier[Proto <: GeneratedMessage](
     val message: Proto,
 ) {}
 
-class EntryRecordReader[Proto <: GeneratedMessage](
-    messagePrototype: GeneratedMessageCompanion[Proto],
+class EntryRecordReader[Proto <: GeneratedMessage](companion: GeneratedMessageCompanion[Proto],
 ) extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
   var it: SSTableIterator[Proto] = _
   var item: Item[Proto] = _
@@ -69,7 +68,7 @@ class EntryRecordReader[Proto <: GeneratedMessage](
     fs.copyToLocalFile(gravelerSplit.path, new Path(localFile.getAbsolutePath))
     // TODO(johnnyaug) should we cache this?
     val sstableReader =
-      new SSTableReader(localFile.getAbsolutePath, messagePrototype)
+      new SSTableReader(localFile.getAbsolutePath, companion)
     it = sstableReader.newIterator()
   }
 

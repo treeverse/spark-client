@@ -17,7 +17,7 @@ private object local {
   }
 }
 
-class SSTableIterator[Proto <: GeneratedMessage](val it: SstFileReaderIterator, messagePrototype: GeneratedMessageCompanion[Proto]) extends Iterator[Item[Proto]] with Closeable {
+class SSTableIterator[Proto <: GeneratedMessage](val it: SstFileReaderIterator, companion: GeneratedMessageCompanion[Proto]) extends Iterator[Item[Proto]] with Closeable {
   // TODO(ariels): explicitly make it closeable, and figure out how to close it when used by
   //     Spark.
   override def hasNext: Boolean = it.isValid
@@ -36,7 +36,7 @@ class SSTableIterator[Proto <: GeneratedMessage](val it: SstFileReaderIterator, 
     //     future, sigh...)
 
     val dataStream = CodedInputStream.newInstance(data)
-    val message = messagePrototype.parseFrom(dataStream)
+    val message = companion.parseFrom(dataStream)
 
     // TODO (johnnyaug) validate item is of the expected type - metarange/range
     dataStream.checkLastTagWas(0)
@@ -50,7 +50,7 @@ object SSTableReader {
   RocksDB.loadLibrary()
 }
 
-class SSTableReader[Proto <: GeneratedMessage](sstableFile: String, messagePrototype: GeneratedMessageCompanion[Proto]) extends Closeable {
+class SSTableReader[Proto <: GeneratedMessage](sstableFile: String, companion: GeneratedMessageCompanion[Proto]) extends Closeable {
   private val options = new Options
   private val reader = new SstFileReader(options)
   private val readOptions = new ReadOptions
@@ -67,6 +67,6 @@ class SSTableReader[Proto <: GeneratedMessage](sstableFile: String, messageProto
   def newIterator(): SSTableIterator[Proto] = {
     val it = reader.newIterator(readOptions)
     it.seekToFirst()
-    new SSTableIterator(it, messagePrototype)
+    new SSTableIterator(it, companion)
   }
 }
