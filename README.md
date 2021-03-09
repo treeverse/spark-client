@@ -5,7 +5,7 @@ Utilize the power of Spark to interact with the metadata on lakeFS. Possible use
 * Create a DataFrame for listing the objects in a specific commit or branch.
 * Compute changes between two commits.
 * Export your data for consumption outside lakeFS.
-* [Something with Retention]
+* Bulk operations on underlying storage
 
 ## Getting Started
 Start Spark Shell / PySpark with the `--packages` flag:
@@ -26,7 +26,13 @@ Alternatively, you can download the Jar from [here]().
     | `spark.hadoop.lakefs.api.access_key` | The access key to use for fetching metadata from lakeFS      |
     | `spark.hadoop.lakefs.api.secret_key` | Corresponding lakeFS secret key                              |
 
-1. The client will also directly interact with your storage using Hadoop FileSystem. Therefore, your Spark session must be able to access the underlying storage of your lakeFS repository.  
+1. The client will also directly interact with your storage using Hadoop FileSystem. Therefore, your Spark session must be able to access the underlying storage of your lakeFS repository.
+For instance, running as a user with a personal account on S3 (not in production) you might add:
+    | Configuration | Description |
+    |--------|-------|
+    | `spark.hadoop.fs.s3a.access.key` | Access key to use for accessing underlying storage on S3 |
+    | `spark.hadoop-fs.s3a.secret.key`  | Corresponding secret key to use with S3 access key |
+
 
 ## Examples
 
@@ -63,6 +69,5 @@ Alternatively, you can download the Jar from [here]().
           +----------+--------+
         */
    ```
-
 
 
