@@ -1,8 +1,7 @@
-package io.treeverse.examples
+package io.treeverse.clients.examples
 
 import io.treeverse.clients.LakeFSContext
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.SparkConf
 
 object List extends App {
   private def dirs(path: String): Seq[String] =
@@ -23,7 +22,7 @@ object List extends App {
     val outputPath = args(2)
     val files = LakeFSContext.newRDD(sc, repo, ref)
 
-    val size = files.flatMap({ case (key, entry) => dirs(new String(key)).map(d => (d, entry.message.getSize())) })
+    val size = files.flatMap({ case (key, entry) => dirs(new String(key)).map(d => (d, entry.message.size)) })
       .reduceByKey(_ + _)
 
     size.saveAsTextFile(outputPath)

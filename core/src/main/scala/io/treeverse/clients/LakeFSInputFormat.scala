@@ -1,13 +1,13 @@
 package io.treeverse.clients
 
-import com.google.protobuf.Message
-import io.treeverse.catalog.Catalog
+import io.treeverse.lakefs.catalog.Entry
 import io.treeverse.clients.LakeFSContext._
-import io.treeverse.committed.Committed.RangeData
+import io.treeverse.lakefs.graveler.committed.RangeData
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.io.Writable
 import org.apache.hadoop.mapred.SplitLocationInfo
 import org.apache.hadoop.mapreduce._
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.io.{DataInput, DataOutput, File}
 import scala.collection.JavaConverters._
@@ -39,7 +39,7 @@ class GravelerSplit(var range: RangeData, var path: Path)
     path = new Path(p.result)
   }
 
-  override def getLength: Long = range.getEstimatedSize
+  override def getLength: Long = range.estimatedSize
 
   override def getLocations: Array[String] = Array.empty[String]
 
@@ -47,13 +47,13 @@ class GravelerSplit(var range: RangeData, var path: Path)
     Array.empty[SplitLocationInfo]
 }
 
-class WithIdentifier[Proto <: Message](
+class WithIdentifier[Proto <: GeneratedMessage](
     val id: Array[Byte],
     val message: Proto,
 ) {}
 
-class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
-    extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
+class EntryRecordReader[Proto <: GeneratedMessage](companion: GeneratedMessageCompanion[Proto],
+) extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
   var it: SSTableIterator[Proto] = _
   var item: Item[Proto] = _
 
@@ -68,7 +68,7 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
     fs.copyToLocalFile(gravelerSplit.path, new Path(localFile.getAbsolutePath))
     // TODO(johnnyaug) should we cache this?
     val sstableReader =
-      new SSTableReader(localFile.getAbsolutePath, messagePrototype)
+      new SSTableReader(localFile.getAbsolutePath, companion)
     it = sstableReader.newIterator()
   }
 
@@ -84,7 +84,7 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
 
   override def getCurrentValue = new WithIdentifier(item.id, item.message)
 
-  override def close(): Unit = it.close
+  override def close(): Unit = it.close()
 
   override def getProgress: Float = {
     0 // TODO(johnnyaug) complete
@@ -92,14 +92,14 @@ class EntryRecordReader[Proto <: Message](messagePrototype: Proto)
 }
 
 object LakeFSInputFormat {
-  private def read[Proto <: Message](
+  private def read[Proto <: GeneratedMessage](
       reader: SSTableReader[Proto],
   ): Seq[Item[Proto]] =
     reader.newIterator().toSeq
 }
 
 class LakeFSInputFormat
-    extends InputFormat[Array[Byte], WithIdentifier[Catalog.Entry]] {
+    extends InputFormat[Array[Byte], WithIdentifier[Entry]] {
   import LakeFSInputFormat._
 
   override def getSplits(job: JobContext): java.util.List[InputSplit] = {
@@ -119,7 +119,7 @@ class LakeFSInputFormat
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
     val rangesReader = new SSTableReader(
       localFile.getAbsolutePath,
-      RangeData.getDefaultInstance,
+      RangeData.messageCompanion,
     )
     localFile.delete()
     val ranges = read(rangesReader)
@@ -137,7 +137,7 @@ class LakeFSInputFormat
   override def createRecordReader(
       split: InputSplit,
       context: TaskAttemptContext,
-  ): RecordReader[Array[Byte], WithIdentifier[Catalog.Entry]] = {
-    new EntryRecordReader(Catalog.Entry.getDefaultInstance)
+  ): RecordReader[Array[Byte], WithIdentifier[Entry]] = {
+    new EntryRecordReader(Entry.messageCompanion)
   }
 }

@@ -1,14 +1,13 @@
 package io.treeverse.clients
 
-import com.google.protobuf.{CodedInputStream, Message}
+import com.google.protobuf.CodedInputStream
 import org.rocksdb.{SstFileReader, _}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
+import java.io.{ByteArrayInputStream, Closeable, DataInputStream}
 import scala.collection.JavaConverters._
 
-import java.io.{ByteArrayInputStream, DataInputStream}
-import java.io.Closeable
-
-class Item[Proto <: Message](val key: Array[Byte], val id: Array[Byte], val message: Proto)
+class Item[T](val key: Array[Byte], val id: Array[Byte], val message: T)
 
 private object local {
   def readNBytes(s: DataInputStream, n: Int): Array[Byte] = {
@@ -18,12 +17,12 @@ private object local {
   }
 }
 
-class SSTableIterator[Proto <: Message](val it: SstFileReaderIterator, val messagePrototype: Proto) extends Iterator[Item[Proto]] with Closeable {
+class SSTableIterator[Proto <: GeneratedMessage](val it: SstFileReaderIterator, companion: GeneratedMessageCompanion[Proto]) extends Iterator[Item[Proto]] with Closeable {
   // TODO(ariels): explicitly make it closeable, and figure out how to close it when used by
   //     Spark.
   override def hasNext: Boolean = it.isValid
 
-  override def close = it.close
+  override def close() : Unit = it.close()
 
   override def next(): Item[Proto] = {
     val bais = new ByteArrayInputStream(it.value)
@@ -37,7 +36,7 @@ class SSTableIterator[Proto <: Message](val it: SstFileReaderIterator, val messa
     //     future, sigh...)
 
     val dataStream = CodedInputStream.newInstance(data)
-    val message = messagePrototype.getParserForType.parseFrom(data).asInstanceOf[Proto]
+    val message = companion.parseFrom(dataStream)
 
     // TODO (johnnyaug) validate item is of the expected type - metarange/range
     dataStream.checkLastTagWas(0)
@@ -51,23 +50,23 @@ object SSTableReader {
   RocksDB.loadLibrary()
 }
 
-class SSTableReader[Proto <: Message](sstableFile: String, messagePrototype: Proto) extends Closeable {
+class SSTableReader[Proto <: GeneratedMessage](sstableFile: String, companion: GeneratedMessageCompanion[Proto]) extends Closeable {
   private val options = new Options
   private val reader = new SstFileReader(options)
   private val readOptions = new ReadOptions
   reader.open(sstableFile)
 
-  def close() = {
-    reader.close
-    options.close
-    readOptions.close
+  def close(): Unit = {
+    reader.close()
+    options.close()
+    readOptions.close()
   }
 
-  def getMetadata(): Map[String, String] = reader.getTableProperties.getUserCollectedProperties.asScala.toMap
+  def getMetadata: Map[String, String] = reader.getTableProperties.getUserCollectedProperties.asScala.toMap
 
   def newIterator(): SSTableIterator[Proto] = {
     val it = reader.newIterator(readOptions)
     it.seekToFirst()
-    new SSTableIterator(it, messagePrototype)
+    new SSTableIterator(it, companion)
   }
 }

@@ -1,6 +1,6 @@
 package io.treeverse.clients
 
-import io.treeverse.catalog.Catalog
+import io.treeverse.lakefs.catalog.Entry
 import org.apache.commons.lang3.StringUtils
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.mapred.InvalidJobConfException
@@ -22,7 +22,7 @@ object LakeFSContext {
       sc: SparkContext,
       repoName: String,
       commitID: String,
-  ): RDD[(Array[Byte], WithIdentifier[Catalog.Entry])] = {
+  ): RDD[(Array[Byte], WithIdentifier[Entry])] = {
     val conf = new Configuration(sc.hadoopConfiguration)
     conf.set(LAKEFS_CONF_JOB_REPO_NAME_KEY, repoName)
     conf.set(LAKEFS_CONF_JOB_COMMIT_ID_KEY, commitID)
@@ -45,7 +45,7 @@ object LakeFSContext {
       conf,
       classOf[LakeFSInputFormat],
       classOf[Array[Byte]],
-      classOf[WithIdentifier[Catalog.Entry]],
+      classOf[WithIdentifier[Entry]],
     )
   }
 
@@ -58,12 +58,12 @@ object LakeFSContext {
       val entry = v.message
       Row(
         new String(k),
-        entry.getAddress,
-        entry.getETag,
+        entry.address,
+        entry.eTag,
         new java.sql.Timestamp(
-          TimeUnit.SECONDS.toMillis(entry.getLastModified.getSeconds),
+          TimeUnit.SECONDS.toMillis(entry.getLastModified.seconds),
         ),
-        entry.getSize,
+        entry.size,
       )
     }
     val schema = new StructType()
