@@ -3,6 +3,7 @@ scalaVersion := "2.12.10"
 
 lazy val core = (project in file("core"))
   .settings(
+    name := "lakefs-spark-client",
     Compile / PB.includePaths += (Compile / resourceDirectory).value,
     Compile / PB.protoSources += (Compile / resourceDirectory).value,
     Compile / PB.targets := Seq(
@@ -11,6 +12,7 @@ lazy val core = (project in file("core"))
     sharedSettings,
   )
   .settings(fatPublishSettings)
+
 lazy val examples = (project in file("examples")).dependsOn(core)
   .settings(
     sharedSettings,
@@ -26,7 +28,7 @@ scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
 
 core / libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
   "commons-codec" % "commons-codec" % "1.15",
-  "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
+  "org.apache.spark" %% "spark-sql" % "3.0.1",
   "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
   "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
   "org.apache.hadoop" % "hadoop-common" % "2.7.7",
@@ -54,6 +56,7 @@ lazy val assemblySettings = Seq(
 
 // Don't publish root project
 publish / skip := true
+disablePlugins(sbtassembly.AssemblyPlugin)
 
 val fatPublishSettings = {
   // Publish fat jars: these are Spark client libraries, which require shading to work.
