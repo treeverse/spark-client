@@ -40,7 +40,7 @@ def generateProject(buildType: BuildType) = {
       libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
         "commons-codec" % "commons-codec" % "1.15",
         "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
-        "com.thesamet.scalapb" %% "scalapb-runtime" % buildType.scalapbVersion % "protobuf" exclude("com.google.protobuf", "protobuf-java"),
+        "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
         "org.apache.hadoop" % "hadoop-aws" % buildType.hadoopVersion,
         "org.apache.hadoop" % "hadoop-common" % buildType.hadoopVersion,
         "org.scalaj" %% "scalaj-http" % "2.4.2",
