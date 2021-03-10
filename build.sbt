@@ -1,44 +1,75 @@
-name := "lakefs-spark-client"
-scalaVersion := "2.12.10"
+import build.BuildType
 
-lazy val core = (project in file("core"))
-  .settings(
-    Compile / PB.includePaths += (Compile / resourceDirectory).value,
-    Compile / PB.protoSources += (Compile / resourceDirectory).value,
-    Compile / PB.targets := Seq(
-      scalapb.gen() -> (Compile / sourceManaged).value
-    ),
-    sharedSettings,
-  )
-  .settings(fatPublishSettings)
-lazy val examples = (project in file("examples")).dependsOn(core)
-  .settings(
-    sharedSettings,
-  )
-  .settings(
-    mainClass in assembly := Some("io.treeverse.examples.List"),
-  )
-  .settings(fatPublishSettings)
+name := "lakefs-spark-client"
+
+lazy val projectVersion = "0.1.0-SNAPSHOT"
+
+// Spark versions 2.4.7 and 3.0.1 use different Scala versions.  Changing this is a deep
+// change, so key the Spark distinction by the Scala distinction.  sbt doesn't appear to
+// support other ways of changing emitted Scala binary versions using the same compiler,
+// sigh...
+
+// SO https://stackoverflow.com/a/60177627/192263 hints that we cannot use 2.11 here before
+// this version
+lazy val scala211Version = "2.11.12"
+lazy val scala212Version = "2.12.12"
+
+lazy val commonSettings = Seq(
+  /*
+   * Define the scala sources relative to the sub-directory the project source. The
+   * individual projects have their sources defined in `./target/${projectName}`,
+   * therefore `./src` lives two directories above base. Also do this for `resources`
+   * etc, if needed.
+   */
+  scalaSource in Compile := baseDirectory.value / ".." / ".." / "core" / "src" / "main" / "scala",
+  scalaSource in Test := baseDirectory.value / ".." / ".." / "core" / "src" / "test" / "scala",
+)
+
+def generateProject(buildType: BuildType) = {
+  lazy val core = Project(s"core-${buildType.name}", file(s"target/core:${buildType.name}"))
+    .settings(
+      sharedSettings,
+      scalaVersion := buildType.scalaVersion,
+      Compile / resourceDirectory := baseDirectory.value / ".." / ".." / "core" / "src" / "main" / "resources",
+      PB.targets := Seq(
+        scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
+      ),
+      Compile / PB.includePaths += (ThisBuild / baseDirectory).value / "core" / "src" / "main" / "resources",
+      Compile / PB.protoSources += (ThisBuild / baseDirectory).value / "core" / "src" / "main" / "resources",
+      version := s"${projectVersion}",
+      libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
+        "commons-codec" % "commons-codec" % "1.15",
+        "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
+        "com.thesamet.scalapb" %% "scalapb-runtime" % buildType.scalapbVersion % "protobuf" exclude("com.google.protobuf", "protobuf-java"),
+        "org.apache.hadoop" % "hadoop-aws" % buildType.hadoopVersion,
+        "org.apache.hadoop" % "hadoop-common" % buildType.hadoopVersion,
+        "org.scalaj" %% "scalaj-http" % "2.4.2",
+        "org.json4s" %% "json4s-native" % "3.7.0-M8",
+        "com.google.guava" % "guava" % "16.0.1",
+        "com.google.guava" % "failureaccess" % "1.0.1",
+      )
+    )
+
+  // lazy val examples = Project(s"examples-${buildType.name}", file(s"target/examples:${buildType.name}"))
+  //   .dependsOn(core)
+  //   .settings(
+  //     sharedSettings,
+  //     libraryDependencies += "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
+  //     mainClass in assembly := Some("io.treeverse.examples.List"),
+  //   )
+  //   .settings(fatPublishSettings)
+  // Seq(core, examples)
+  core
+}
+
+lazy val spark2 = generateProject(new BuildType("247", scala211Version, "2.4.7", "0.9.8", "2.7.7"))
+lazy val spark3 = generateProject(new BuildType("301", scala212Version, "3.0.1", "0.10.11", "2.7.7"))
+
+lazy val root = (project in file(".")).aggregate(spark2, spark3)
 
 // Use an older JDK to be Spark compatible
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
 scalacOptions ++= Seq("-release", "8", "-target:jvm-1.8")
-
-core / libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
-  "commons-codec" % "commons-codec" % "1.15",
-  "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
-  "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion % "protobuf",
-  "org.apache.hadoop" % "hadoop-aws" % "2.7.7",
-  "org.apache.hadoop" % "hadoop-common" % "2.7.7",
-  "org.scalaj" %% "scalaj-http" % "2.4.2",
-  "org.json4s" %% "json4s-native" % "3.7.0-M8",
-  "com.google.guava" % "guava" % "16.0.1",
-  "com.google.guava" % "failureaccess" % "1.0.1",
-)
-
-examples / libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
-)
 
 lazy val assemblySettings = Seq(
   assembly / assemblyMergeStrategy := (_ => MergeStrategy.first),
@@ -53,7 +84,7 @@ lazy val assemblySettings = Seq(
 )
 
 // Don't publish root project
-publish / skip := true
+root / publish / skip := true
 
 val fatPublishSettings = {
   // Publish fat jars: these are Spark client libraries, which require shading to work.
@@ -112,7 +143,7 @@ ThisBuild / developers := List(
   ),
 )
 
-lazy val sharedSettings = assemblySettings ++ publishSettings
+lazy val sharedSettings = commonSettings ++ assemblySettings ++ publishSettings
 credentials ++= Seq(
   Credentials(Path.userHome / ".sbt" / "credentials"),
   Credentials(Path.userHome / ".sbt" / "sonatype_credentials"),
@@ -125,5 +156,3 @@ ThisBuild / organizationHomepage := Some(url("http://treeverse.io"))
 ThisBuild / description := "Spark client for lakeFS object metadata."
 ThisBuild / licenses := List("Apache 2" -> new URL("http://www.apache.org/licenses/LICENSE-2.0.txt"))
 ThisBuild / homepage := Some(url("https://github.com/treeverse/spark-client"))
-
-ThisBuild / version := "0.1.0-SNAPSHOT"

@@ -17,7 +17,7 @@ private object local {
   }
 }
 
-class SSTableIterator[Proto <: GeneratedMessage](val it: SstFileReaderIterator, companion: GeneratedMessageCompanion[Proto]) extends Iterator[Item[Proto]] with Closeable {
+class SSTableIterator[Proto <: GeneratedMessage with scalapb.Message[Proto]](val it: SstFileReaderIterator, companion: GeneratedMessageCompanion[Proto]) extends Iterator[Item[Proto]] with Closeable {
   // TODO(ariels): explicitly make it closeable, and figure out how to close it when used by
   //     Spark.
   override def hasNext: Boolean = it.isValid
@@ -50,7 +50,7 @@ object SSTableReader {
   RocksDB.loadLibrary()
 }
 
-class SSTableReader[Proto <: GeneratedMessage](sstableFile: String, companion: GeneratedMessageCompanion[Proto]) extends Closeable {
+class SSTableReader[Proto <: GeneratedMessage with scalapb.Message[Proto]](sstableFile: String, companion: GeneratedMessageCompanion[Proto]) extends Closeable {
   private val options = new Options
   private val reader = new SstFileReader(options)
   private val readOptions = new ReadOptions
