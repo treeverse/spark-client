@@ -29,7 +29,7 @@ For instance, running as a user with a personal account on S3 (not in production
     | Configuration | Description |
     |--------|-------|
     | `spark.hadoop.fs.s3a.access.key` | Access key to use for accessing underlying storage on S3 |
-    | `spark.hadoop-fs.s3a.secret.key`  | Corresponding secret key to use with S3 access key |
+    | `spark.hadoop.fs.s3a.secret.key`  | Corresponding secret key to use with S3 access key |
 
 
 ## Examples
@@ -58,14 +58,14 @@ For instance, running as a user with a personal account on S3 (not in production
    ```scala
     df.createOrReplaceTempView("files")
     spark.sql("SELECT DATE(last_modified), COUNT(*) FROM files GROUP BY 1 ORDER BY 1")
-       /* output example:
-          +----------+--------+
-          |        dt|count(1)|
-          +----------+--------+
-          |2021-03-05|       2|
-          |2021-03-07|       2|
-          +----------+--------+
-        */
+    /* output example:
+       +----------+--------+
+       |        dt|count(1)|
+       +----------+--------+
+       |2021-03-05|       2|
+       |2021-03-07|       2|
+       +----------+--------+
+     */
    ```
 
 
