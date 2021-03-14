@@ -90,7 +90,6 @@ lazy val commonSettings = Seq(
 )
 
 lazy val publishSettings = Seq(
-  // Currently cannot publish docs, possibly need to shade Google protobufs better
   publishTo := {
     val nexus = "https://s01.oss.sonatype.org/"
     if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
