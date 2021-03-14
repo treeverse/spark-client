@@ -14,20 +14,15 @@ isSnapshot := true
 lazy val scala211Version = "2.11.12"
 lazy val scala212Version = "2.12.12"
 
-def settingsToCompileIn(dir: String) = Seq(
-  /*
-   * Define the scala sources relative to the sub-directory the project source. The
-   * individual projects have their sources defined in `./target/${projectName}`,
-   * therefore `./src` lives two directories above base. Also do this for `resources`
-   * etc, if needed.
-   */
-  Compile / scalaSource := baseDirectory.value / ".." / ".." / dir / "src" / "main" / "scala",
-  Test / scalaSource := baseDirectory.value / ".." / ".." / dir / "src" / "test" / "scala",
-  Compile / resourceDirectory := baseDirectory.value / ".." / ".." / dir / "src" / "main" / "resources",
-  Compile / PB.includePaths += (ThisBuild / baseDirectory).value / dir / "src" / "main" / "resources",
-  Compile / PB.protoSources += (ThisBuild / baseDirectory).value / dir / "src" / "main" / "resources",
-)
-
+def settingsToCompileIn(dir: String) = {
+  Seq(
+    Compile / scalaSource := (ThisBuild / baseDirectory).value / dir / "src" / "main" / "scala",
+    Test / scalaSource := (ThisBuild / baseDirectory).value / dir / "src" / "test" / "scala",
+    Compile / resourceDirectory := (ThisBuild / baseDirectory).value / dir / "src" / "main" / "resources",
+    Compile / PB.includePaths += (Compile / resourceDirectory).value,
+    Compile / PB.protoSources += (Compile / resourceDirectory).value,
+  )
+}
 
 def generateCoreProject(buildType: BuildType) =
   Project(s"core-${buildType.name}", file(s"target/core-${buildType.name}"))
