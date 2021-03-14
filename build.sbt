@@ -1,6 +1,6 @@
 import build.BuildType
 
-name := "lakefs-spark-client"
+lazy val baseName = "lakefs-spark"
 
 lazy val projectVersion = "0.1.0-SNAPSHOT.4"
 isSnapshot := true
@@ -25,7 +25,7 @@ def settingsToCompileIn(dir: String) = {
 }
 
 def generateCoreProject(buildType: BuildType) =
-  Project(s"core-${buildType.name}", file(s"target/core-${buildType.name}"))
+  Project(s"${baseName}-client-${buildType.name}", file(s"target/core-${buildType.name}"))
     .settings(
       sharedSettings,
       settingsToCompileIn("core"),
@@ -47,7 +47,7 @@ def generateCoreProject(buildType: BuildType) =
     )
 
 def generateExamplesProject(buildType: BuildType) =
-  Project(s"examples-${buildType.name}", file(s"target/examples-${buildType.name}"))
+  Project(s"${baseName}-examples-${buildType.name}", file(s"target/examples-${buildType.name}"))
     .settings(
       sharedSettings,
       settingsToCompileIn("core"),
