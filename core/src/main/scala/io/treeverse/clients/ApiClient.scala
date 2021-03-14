@@ -8,19 +8,24 @@ import scalaj.http.Http
 import java.net.URI
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.Callable
 
 class ApiClient(apiUrl: String, accessKey: String, secretKey: String) {
   private val storageNamespaceCache = CacheBuilder.newBuilder().expireAfterWrite(2, TimeUnit.MINUTES).build[String, String]()
 
+  private class CallableFn(val fn: () => String) extends Callable[String] {
+    def call(): String = fn()
+  }
+
   private def getStorageNamespace(repoName: String): String = {
-    storageNamespaceCache.get(repoName, () => {
+    storageNamespaceCache.get(repoName, new CallableFn(() => {
       val getRepositoryURI = URI.create("%s/repositories/%s".format(apiUrl, repoName)).normalize()
       val resp = Http(getRepositoryURI.toString).header("Accept", "application/json").auth(accessKey, secretKey).asString
       val JString(storageNamespace) = parse(resp.body) \ "storage_namespace"
       var snUri = URI.create(storageNamespace)
       snUri = new URI(if (snUri.getScheme == "s3") "s3a" else snUri.getScheme, snUri.getHost, snUri.getPath, snUri.getFragment)
       snUri.normalize().toString
-    })
+    }))
   }
 
   def getMetaRangeURL(repoName: String, commitID: String): String = {

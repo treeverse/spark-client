@@ -47,20 +47,18 @@ class GravelerSplit(var range: RangeData, var path: Path)
     Array.empty[SplitLocationInfo]
 }
 
-class WithIdentifier[Proto <: GeneratedMessage](
+class WithIdentifier[Proto <: GeneratedMessage with scalapb.Message[Proto]](
     val id: Array[Byte],
-    val message: Proto,
+    val message: Proto
 ) {}
 
-class EntryRecordReader[Proto <: GeneratedMessage](companion: GeneratedMessageCompanion[Proto],
+class EntryRecordReader[Proto <: GeneratedMessage with scalapb.Message[Proto]](
+  companion: GeneratedMessageCompanion[Proto]
 ) extends RecordReader[Array[Byte], WithIdentifier[Proto]] {
   var it: SSTableIterator[Proto] = _
   var item: Item[Proto] = _
 
-  override def initialize(
-      split: InputSplit,
-      context: TaskAttemptContext,
-  ): Unit = {
+  override def initialize(split: InputSplit, context: TaskAttemptContext): Unit = {
     val localFile = File.createTempFile("lakefs.", ".range")
     localFile.deleteOnExit()
     val gravelerSplit = split.asInstanceOf[GravelerSplit]
@@ -92,10 +90,7 @@ class EntryRecordReader[Proto <: GeneratedMessage](companion: GeneratedMessageCo
 }
 
 object LakeFSInputFormat {
-  private def read[Proto <: GeneratedMessage](
-      reader: SSTableReader[Proto],
-  ): Seq[Item[Proto]] =
-    reader.newIterator().toSeq
+  private def read[Proto <: GeneratedMessage with scalapb.Message[Proto]](reader: SSTableReader[Proto]): Seq[Item[Proto]] = reader.newIterator().toSeq
 }
 
 class LakeFSInputFormat
@@ -109,7 +104,7 @@ class LakeFSInputFormat
     val apiClient = new ApiClient(
       conf.get(LAKEFS_CONF_API_URL_KEY),
       conf.get(LAKEFS_CONF_API_ACCESS_KEY_KEY),
-      conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY),
+      conf.get(LAKEFS_CONF_API_SECRET_KEY_KEY)
     )
     val metaRangeURL = apiClient.getMetaRangeURL(repoName, commitID)
     val p = new Path(metaRangeURL)
@@ -119,24 +114,24 @@ class LakeFSInputFormat
     fs.copyToLocalFile(p, new Path(localFile.getAbsolutePath))
     val rangesReader = new SSTableReader(
       localFile.getAbsolutePath,
-      RangeData.messageCompanion,
+      RangeData.messageCompanion
     )
     localFile.delete()
     val ranges = read(rangesReader)
     ranges.map(r =>
       new GravelerSplit(
         r.message,
-        new Path(apiClient.getRangeURL(repoName, new String(r.id))),
+        new Path(apiClient.getRangeURL(repoName, new String(r.id)))
       )
       // Scala / JRE not strong enough to handle List<FileSplit> as List<InputSplit>;
       // explicitly upcast to generate Seq[InputSplit].
-        .asInstanceOf[InputSplit],
+        .asInstanceOf[InputSplit]
     )
   }.asJava
 
   override def createRecordReader(
       split: InputSplit,
-      context: TaskAttemptContext,
+      context: TaskAttemptContext
   ): RecordReader[Array[Byte], WithIdentifier[Entry]] = {
     new EntryRecordReader(Entry.messageCompanion)
   }
