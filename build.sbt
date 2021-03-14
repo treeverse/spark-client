@@ -15,25 +15,30 @@ isSnapshot := true
 lazy val scala211Version = "2.11.12"
 lazy val scala212Version = "2.12.12"
 
+def settingsToCompileIn(dir: String) = Seq(
+  /*
+   * Define the scala sources relative to the sub-directory the project source. The
+   * individual projects have their sources defined in `./target/${projectName}`,
+   * therefore `./src` lives two directories above base. Also do this for `resources`
+   * etc, if needed.
+   */
+  Compile / scalaSource := baseDirectory.value / ".." / ".." / dir / "src" / "main" / "scala",
+  Test / scalaSource := baseDirectory.value / ".." / ".." / dir / "src" / "test" / "scala",
+  Compile / resourceDirectory := baseDirectory.value / ".." / ".." / dir / "src" / "main" / "resources",
+  Compile / PB.includePaths += (ThisBuild / baseDirectory).value / dir / "src" / "main" / "resources",
+  Compile / PB.protoSources += (ThisBuild / baseDirectory).value / dir / "src" / "main" / "resources",
+)
+
+
 def generateCoreProject(buildType: BuildType) =
   Project(s"core-${buildType.name}", file(s"target/core-${buildType.name}"))
     .settings(
       sharedSettings,
-      /*
-       * Define the scala sources relative to the sub-directory the project source. The
-       * individual projects have their sources defined in `./target/${projectName}`,
-       * therefore `./src` lives two directories above base. Also do this for `resources`
-       * etc, if needed.
-       */
-      scalaSource in Compile := baseDirectory.value / ".." / ".." / "core" / "src" / "main" / "scala",
-      scalaSource in Test := baseDirectory.value / ".." / ".." / "core" / "src" / "test" / "scala",
+      settingsToCompileIn("core"),
       scalaVersion := buildType.scalaVersion,
-      Compile / resourceDirectory := baseDirectory.value / ".." / ".." / "core" / "src" / "main" / "resources",
       PB.targets := Seq(
         scalapb.gen() -> (Compile / sourceManaged).value / "scalapb"
       ),
-      Compile / PB.includePaths += (ThisBuild / baseDirectory).value / "core" / "src" / "main" / "resources",
-      Compile / PB.protoSources += (ThisBuild / baseDirectory).value / "core" / "src" / "main" / "resources",
       libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
         "commons-codec" % "commons-codec" % "1.15",
         "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
@@ -51,15 +56,8 @@ def generateExamplesProject(buildType: BuildType) =
   Project(s"examples-${buildType.name}", file(s"target/examples-${buildType.name}"))
     .settings(
       sharedSettings,
+      settingsToCompileIn("core"),
       scalaVersion := buildType.scalaVersion,
-      /*
-       * Define the scala sources relative to the sub-directory the project source. The
-       * individual projects have their sources defined in `./target/${projectName}`,
-       * therefore `./src` lives two directories above base. Also do this for `resources`
-       * etc, if needed.
-       */
-      scalaSource in Compile := baseDirectory.value / ".." / ".." / "examples" / "src" / "main" / "scala",
-      scalaSource in Test := baseDirectory.value / ".." / ".." / "examples" / "src" / "test" / "scala",
       libraryDependencies += "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
       mainClass in assembly := Some("io.treeverse.examples.List"),
     )
