@@ -2,7 +2,8 @@ import build.BuildType
 
 name := "lakefs-spark-client"
 
-lazy val projectVersion = "0.1.0-SNAPSHOT"
+lazy val projectVersion = "0.1.0-SNAPSHOT.4"
+isSnapshot := true
 
 // Spark versions 2.4.7 and 3.0.1 use different Scala versions.  Changing this is a deep
 // change, so key the Spark distinction by the Scala distinction.  sbt doesn't appear to
@@ -14,21 +15,18 @@ lazy val projectVersion = "0.1.0-SNAPSHOT"
 lazy val scala211Version = "2.11.12"
 lazy val scala212Version = "2.12.12"
 
-lazy val commonSettings = Seq(
-  /*
-   * Define the scala sources relative to the sub-directory the project source. The
-   * individual projects have their sources defined in `./target/${projectName}`,
-   * therefore `./src` lives two directories above base. Also do this for `resources`
-   * etc, if needed.
-   */
-  scalaSource in Compile := baseDirectory.value / ".." / ".." / "core" / "src" / "main" / "scala",
-  scalaSource in Test := baseDirectory.value / ".." / ".." / "core" / "src" / "test" / "scala",
-)
-
-def generateProject(buildType: BuildType) = {
-  lazy val core = Project(s"core-${buildType.name}", file(s"target/core:${buildType.name}"))
+def generateCoreProject(buildType: BuildType) =
+  Project(s"core-${buildType.name}", file(s"target/core-${buildType.name}"))
     .settings(
       sharedSettings,
+      /*
+       * Define the scala sources relative to the sub-directory the project source. The
+       * individual projects have their sources defined in `./target/${projectName}`,
+       * therefore `./src` lives two directories above base. Also do this for `resources`
+       * etc, if needed.
+       */
+      scalaSource in Compile := baseDirectory.value / ".." / ".." / "core" / "src" / "main" / "scala",
+      scalaSource in Test := baseDirectory.value / ".." / ".." / "core" / "src" / "test" / "scala",
       scalaVersion := buildType.scalaVersion,
       Compile / resourceDirectory := baseDirectory.value / ".." / ".." / "core" / "src" / "main" / "resources",
       PB.targets := Seq(
@@ -36,7 +34,6 @@ def generateProject(buildType: BuildType) = {
       ),
       Compile / PB.includePaths += (ThisBuild / baseDirectory).value / "core" / "src" / "main" / "resources",
       Compile / PB.protoSources += (ThisBuild / baseDirectory).value / "core" / "src" / "main" / "resources",
-      version := s"${projectVersion}",
       libraryDependencies ++= Seq("org.rocksdb" % "rocksdbjni" % "6.6.4",
         "commons-codec" % "commons-codec" % "1.15",
         "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
@@ -50,22 +47,32 @@ def generateProject(buildType: BuildType) = {
       )
     )
 
-  // lazy val examples = Project(s"examples-${buildType.name}", file(s"target/examples:${buildType.name}"))
-  //   .dependsOn(core)
-  //   .settings(
-  //     sharedSettings,
-  //     libraryDependencies += "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
-  //     mainClass in assembly := Some("io.treeverse.examples.List"),
-  //   )
-  //   .settings(fatPublishSettings)
-  // Seq(core, examples)
-  core
-}
+def generateExamplesProject(buildType: BuildType) =
+  Project(s"examples-${buildType.name}", file(s"target/examples-${buildType.name}"))
+    .settings(
+      sharedSettings,
+      scalaVersion := buildType.scalaVersion,
+      /*
+       * Define the scala sources relative to the sub-directory the project source. The
+       * individual projects have their sources defined in `./target/${projectName}`,
+       * therefore `./src` lives two directories above base. Also do this for `resources`
+       * etc, if needed.
+       */
+      scalaSource in Compile := baseDirectory.value / ".." / ".." / "examples" / "src" / "main" / "scala",
+      scalaSource in Test := baseDirectory.value / ".." / ".." / "examples" / "src" / "test" / "scala",
+      libraryDependencies += "org.apache.spark" %% "spark-sql" % buildType.sparkVersion % "provided",
+      mainClass in assembly := Some("io.treeverse.examples.List"),
+    )
 
-lazy val spark2 = generateProject(new BuildType("247", scala211Version, "2.4.7", "0.9.8", "2.7.7"))
-lazy val spark3 = generateProject(new BuildType("301", scala212Version, "3.0.1", "0.10.11", "2.7.7"))
+lazy val spark2Type = new BuildType("247", scala211Version, "2.4.7", "0.9.8", "2.7.7")
+lazy val spark3Type = new BuildType("301", scala212Version, "3.0.1", "0.10.11", "2.7.7")
 
-lazy val root = (project in file(".")).aggregate(spark2, spark3)
+lazy val core2 = generateCoreProject(spark2Type)
+lazy val core3 = generateCoreProject(spark3Type)
+lazy val examples2 = generateExamplesProject(spark2Type).dependsOn(core2)
+lazy val examples3 = generateExamplesProject(spark3Type).dependsOn(core3)
+
+lazy val root = (project in file(".")).aggregate(core2, core3, examples2, examples3)
 
 // Use an older JDK to be Spark compatible
 javacOptions ++= Seq("-source", "1.8", "-target", "1.8")
@@ -86,21 +93,12 @@ lazy val assemblySettings = Seq(
 // Don't publish root project
 root / publish / skip := true
 
-val fatPublishSettings = {
-  // Publish fat jars: these are Spark client libraries, which require shading to work.
-  // sbt-assembly says not to publish fat jars, but particular sparksql-scalapb says to
-  // publish them.  Go with what works :-/
-  artifact in (Compile, assembly) := {
-    val art = (artifact in (Compile, assembly)).value
-    art.withClassifier(Some("assembly"))
-  }
-
-  addArtifact(artifact in (Compile, assembly), assembly)
-}
+lazy val commonSettings = Seq(
+  version := projectVersion
+)
 
 lazy val publishSettings = Seq(
   // Currently cannot publish docs, possibly need to shade Google protobufs better
-  Compile / packageDoc / publishArtifact := false,
   publishTo := {
     val nexus = "https://s01.oss.sonatype.org/"
     if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
@@ -109,6 +107,8 @@ lazy val publishSettings = Seq(
   // Remove all additional repository other than Maven Central from POM
   pomIncludeRepository := { _ => false },
 )
+
+lazy val sharedSettings = commonSettings ++ assemblySettings ++ publishSettings
 
 ThisBuild / scmInfo := Some(
   ScmInfo(
@@ -143,7 +143,6 @@ ThisBuild / developers := List(
   ),
 )
 
-lazy val sharedSettings = commonSettings ++ assemblySettings ++ publishSettings
 credentials ++= Seq(
   Credentials(Path.userHome / ".sbt" / "credentials"),
   Credentials(Path.userHome / ".sbt" / "sonatype_credentials"),
