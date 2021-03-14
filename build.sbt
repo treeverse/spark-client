@@ -7,8 +7,7 @@ isSnapshot := true
 
 // Spark versions 2.4.7 and 3.0.1 use different Scala versions.  Changing this is a deep
 // change, so key the Spark distinction by the Scala distinction.  sbt doesn't appear to
-// support other ways of changing emitted Scala binary versions using the same compiler,
-// sigh...
+// support other ways of changing emitted Scala binary versions using the same compiler.
 
 // SO https://stackoverflow.com/a/60177627/192263 hints that we cannot use 2.11 here before
 // this version
